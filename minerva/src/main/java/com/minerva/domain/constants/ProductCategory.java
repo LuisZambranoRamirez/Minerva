@@ -2,7 +2,7 @@ package com.minerva.domain.constants;
 
 import com.minerva.domain.entities.userAction.StringAttribute;
 
-public enum Category implements StringAttribute {
+public enum ProductCategory implements StringAttribute {
     BEBIDAS,
     ABARROTES_SECOS,
     CAFE_INFUSIONES,
