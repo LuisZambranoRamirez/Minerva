@@ -3,8 +3,8 @@ spring:
     name: minerva
   datasource:
     # revisar que hace &allowPublicKeyRetrieval=true
-    url: jdbc:mysql://localhost:3306/apolo?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true  # URL de conexión a MySQL
-    username: root  # Usuario de la base de datos
+    url: jdbc:postgresql://localhost:5432/apolo?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true  # URL de conexión a MySQL
+    username: postgres  # Usuario de la base de datos
     password: "Drakotako147258369#"   # Contraseña de la base de datos
   jpa:
     open-in-view: false
