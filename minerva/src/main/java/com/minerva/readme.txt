@@ -92,3 +92,9 @@ sin UNIQUE.
 -- se deberia agregar una bandera para los productos que son peresibles y asi poder obligar a ingresar un fecha de caducidad
 
 -- revisar los dto de pay, porque creo que deberia haber una de lectura y otro de escritura, una recibe datos crudos (para la creacion) y otro lo valueobjects para su lectura
+
+-- debo maximizar el uso de los set en los repository intrerface
+example
+    void save(Sale sale, Set<Product> products);
+
+-- falta el map de sale
