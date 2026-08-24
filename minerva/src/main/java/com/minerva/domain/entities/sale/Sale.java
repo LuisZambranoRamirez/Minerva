@@ -1,135 +1,152 @@
 package com.minerva.domain.entities.sale;
 
+import com.minerva.domain.entities.customer.CustomerId;
+import com.minerva.domain.entities.product.SaleProduct;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.exceptions.*;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.entities.product.ProductId;
 import com.minerva.domain.services.Result;
-import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.exceptions.NullValueException;
-import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.constants.PaymentMethod;
 import com.minerva.domain.valueObject.id.CustomerName;
-import com.minerva.domain.valueObject.id.ProductIdImpl;
 import com.minerva.domain.valueObject.id.SaleIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
-public class Sale extends Entity<SaleId> {
-    private final CustomerName customerName;
+public class Sale extends Entity<SaleId> implements SaleProduct {
+    private final CustomerId customerId;
     private final LocalDateTime registrationDate;
 
-    private final List<Pay>  pays =  new LinkedList<>();
+    private final List<Pay> pays =  new LinkedList<>();
     private final Map<ProductId, SaleDetail> saleDetails = new HashMap<>();
 
-    public Sale(String customerNameId, List<SaleItem> items) throws DomainException {    
+    public Sale(String customerNameId, List<SaleItemWriteDTO> items) throws DomainException {
         super(SaleIdImpl.generate());
-        this.customerName = new CustomerName(customerNameId);
-        if (items == null) {
-            throw new NullValueException("La venta debe tener al menos un item");
-        }
-
-        if (items.isEmpty()) {
-            throw new DomainException("La venta debe tener al menos un item");
-        }
-
-        for (SaleItem item : items) {
-            this.addDetail(
-                item.productSale,
-                item.unitPrice,
-                item.quantity
-            );
-        }
-
-        // Valores por defecto
+        this.customerId = new CustomerName(customerNameId);
+        this.addSaleItem(items);
         this.registrationDate = LocalDateTime.now();
     }
 
-    public Sale(UUID saleId, String customerNameId, LocalDateTime registrationDate, List<SaleDetailDTO> saleDetails, List<PayDTO> pays) {
-        SaleIdImpl tempId;
-        try {
-            tempId = new SaleIdImpl(saleId);
-            this.customerName = new CustomerName(customerNameId);
-            this.registrationDate = registrationDate;             
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al crear la venta: " + e.getMessage(), e);
-        }
-        super(tempId);
+    public Sale(UUID saleId, String customerId, LocalDateTime registrationDate, List<SaleItemReadDTO> saleItemReadDTOS, List<PayReadDTO> payReadDTOList) {
+        SaleId saleIdValue;
 
         try {
-            if (saleDetails != null && !saleDetails.isEmpty()) {
-                for (SaleDetailDTO detailDTO : saleDetails) {
-                    ProductId productId = new ProductIdImpl(detailDTO.productId);
-                    SaleDetail saleDetail = new SaleDetail(
-                        detailDTO.saleDetailId,
-                        detailDTO.quantity,
-                        detailDTO.unitPrice
-                    );
-                    this.saleDetails.put(productId, saleDetail);
-                }
-            } else {
-                throw new DomainException("La venta debe tener al menos un detalle");
-            }
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al crear la venta: " + e.getMessage(), e);
+            if (registrationDate == null) throw new InvalidDomainArgumentException("La fecha de registro no puede ser nula");
+            if (saleItemReadDTOS == null) throw new InvalidDomainArgumentException("La lista de items de venta no puede ser nula");
+            if (payReadDTOList == null) throw new InvalidDomainArgumentException("La lista de pagos no puede ser nula");
+
+            if (saleItemReadDTOS.stream().anyMatch(Objects::isNull)) throw new InvalidDomainArgumentException("La lista de items de venta no puede contener elementos nulos");
+            if (payReadDTOList.stream().anyMatch(Objects::isNull)) throw new InvalidDomainArgumentException("La lista de pagos no puede contener elementos nulos");
+
+            saleIdValue = new SaleIdImpl(saleId);
+            this.customerId = new CustomerName(customerId);
+            this.registrationDate = registrationDate;
+        } catch (InvalidDomainArgumentException e) {
+            throw new EntityRestoreException(e.getMessage(), e);
+        }
+        super(saleIdValue);
+
+        for (SaleItemReadDTO saleItemReadDTO : saleItemReadDTOS) {
+            SaleDetail saleDetail = new SaleDetail(
+                    saleItemReadDTO.saleDetailId.getIdValue(),
+                    saleItemReadDTO.productQuantity.getValue(),
+                    saleItemReadDTO.unitPrice.getValue()
+            );
+            this.saleDetails.put(saleItemReadDTO.productId, saleDetail);
         }
 
-        if (pays != null) {
-            for (PayDTO payDTO : pays) {
-                this.pays.add(new Pay(
-                    payDTO.payId,
-                    payDTO.amount,
-                    payDTO.paymentMethod,
-                    payDTO.registrationDate
-                ));
-            }
+        for (PayReadDTO payReadDTO : payReadDTOList) {
+            Pay pay = new Pay(
+                payReadDTO.payId.getIdValue(),
+                payReadDTO.amount.getValue(),
+                payReadDTO.paymentMethod,
+                payReadDTO.registrationDate
+            );
+
+            this.pays.add(pay);
         }
     }
 
-    public record SaleItem(ProductSale productSale, BigDecimal quantity, BigDecimal unitPrice) {}
+    @Override
+    public Map<String, Attribute<?>> getAttributes() {
+        return Map.of();
+    }
 
-    public record SaleDetailDTO(UUID saleDetailId, UUID productId, BigDecimal quantity, BigDecimal unitPrice) {}
+    @Override
+    public Optional<ProductQuantity> getSoldQuantity(ProductId productId) {
+        SaleDetail saleDetail = saleDetails.get(productId);
 
-    public record PayDTO(String payId, BigDecimal amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {}
+        if (saleDetail == null) return Optional.empty();
+
+        return Optional.of(saleDetail.getQuantity());
+    }
+
+    public record SaleItemWriteDTO(ProductSale productSale, BigDecimal quantity, BigDecimal unitPrice) {}
+    public record SaleItemReadDTO(SaleDetailId saleDetailId, SaleId saleId, ProductId productId, ProductQuantity productQuantity, Money unitPrice) {}
+    public record PayWriteDTO(BigDecimal amount, PaymentMethod paymentMethod) {}
+    public record PayReadDTO(PayId payId, SaleId saleId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {}
 
     // nota: se deberia poner un minimo de ganancia sobre el costo cuando se negocia con el cliente el precio, por el momento solo se mira si es menor que el costo
-    private void addDetail(
-            ProductSale productSale,
-            BigDecimal negotiatedUnitPrice,
-            BigDecimal quantityBigDecimal
-    ) throws DomainException {
+    private void addSaleItem(List<SaleItemWriteDTO> items) throws DomainException {
+        if (items == null) throw new NullValueException("La venta debe tener al menos un item");
+        if (items.isEmpty()) throw new DomainException("La venta debe tener al menos un item");
 
-        if (saleDetails.containsKey(productSale.getId()))
-            throw new DomainException("El producto ya existe en la venta. Modifique la cantidad en lugar de agregarlo nuevamente.");
+        for (SaleItemWriteDTO item : items) {
+            ProductSale productSale = item.productSale();
 
-        Money unitPriceMoney;
-
-        if (negotiatedUnitPrice == null) {
-            unitPriceMoney = productSale.getPrice();
-        } else {
-            unitPriceMoney = new Money(negotiatedUnitPrice);
-
-            if (unitPriceMoney.isLessThan(productSale.getCost())) {
-                throw new DomainException("El precio de venta no puede ser menor que el costo.");
+            if (saleDetails.containsKey(productSale.getId())) {
+                throw new DomainException(
+                        "El producto ya existe en la venta. Modifique la cantidad en lugar de agregarlo nuevamente."
+                );
             }
+
+            Money unitPriceMoney;
+
+            if (item.unitPrice() == null) {
+                unitPriceMoney = productSale.getPrice();
+            } else {
+                unitPriceMoney = new Money(item.unitPrice());
+
+                if (unitPriceMoney.isLessThan(productSale.getCost())) {
+                    throw new DomainException(
+                            "El precio de venta no puede ser menor que el costo."
+                    );
+                }
+            }
+
+            SaleDetail newDetail = new SaleDetail(
+                    new ProductQuantity(item.quantity()),
+                    unitPriceMoney
+            );
+
+            saleDetails.put(productSale.getId(), newDetail);
         }
-
-        SaleDetail newDetail = new SaleDetail(
-                new ProductQuantity(quantityBigDecimal),
-                unitPriceMoney
-        );
-
-        saleDetails.put(productSale.getId(), newDetail);
     }
 
-    public Result<Void> addPayment(BigDecimal amount, PaymentMethod paymentMethod) {
+    public List<SaleItemReadDTO> getSaleDetails() {
+        List<SaleItemReadDTO> saleItemReadDTOList = new ArrayList<>(saleDetails.size());
+
+        saleDetails.forEach((productId, saleDetail) -> saleItemReadDTOList.add(
+                new SaleItemReadDTO(
+                        saleDetail.getId(),
+                        this.getId(),
+                        productId,
+                        saleDetail.getQuantity(),
+                        saleDetail.getUnitPrice())));
+
+        return saleItemReadDTOList;
+    }
+
+    public Result<Void> addPayment(PayWriteDTO payWriteDTO) {
         if (isDueCanceled()) return Result.fail("La VENTA ya esta CANCELADA");
 
         Pay payCreated;
         try {
-            payCreated = new Pay(new Money(amount), paymentMethod);
+            payCreated = new Pay(new Money(payWriteDTO.amount), payWriteDTO.paymentMethod);
         } catch (DomainException e) {
             return Result.fail(e.getMessage());
         }
@@ -139,6 +156,23 @@ public class Sale extends Entity<SaleId> {
 
         pays.add(payCreated);
         return Result.success(null);
+    }
+
+    public List<PayReadDTO> getPays() {
+        List<PayReadDTO> payReadDTOList = new ArrayList<>(pays.size());
+
+        for (Pay pay : pays) {
+            payReadDTOList.add(
+                    new PayReadDTO(
+                            pay.getId(),
+                            this.getId(),
+                            pay.getAmount(),
+                            pay.getPaymentMethod(),
+                            pay.getRegistrationDate()
+                    ));
+        }
+
+        return payReadDTOList;
     }
 
     public Money calculateTotal() {
@@ -169,43 +203,7 @@ public class Sale extends Entity<SaleId> {
         return registrationDate;
     }
 
-    public CustomerName getCustomerId() {
-        return customerName;
+    public CustomerId getCustomerId() {
+        return customerId;
     }
-
-    public List<PayDTO> getPays() {
-        List<PayDTO> paysDTO = new ArrayList<>(pays.size());
-        for (Pay pay : pays) {
-            paysDTO.add(new PayDTO(
-                pay.getId().toString(),
-                pay.getAmount().value, 
-                pay.getPaymentMethod(), 
-                pay.getRegistrationDate()));
-        }
-        return paysDTO;
-    }
-
-    public List<SaleDetailDTO> getSaleDetails() {
-        List<SaleDetailDTO> saleDetailDTOList = new ArrayList<>(saleDetails.size());
-
-        saleDetails.forEach((productId, saleDetail) -> saleDetailDTOList.add(
-                new SaleDetailDTO(
-                        saleDetail.getId().value(),
-                        productId.value(),
-                        saleDetail.getQuantity().value,
-                        saleDetail.getUnitPrice().value)));
-
-        return saleDetailDTOList;
-    }
-
-    /*public Map<ProductId, ProductQuantity> getProductQuantities() {
-        HashMap<ProductId, ProductQuantity> productIds = new HashMap<>();
-
-        for (SaleDetail detail : saleDetails.values()) {
-            productIds.put(detail.getProductId(), detail.getQuantity());
-        }
-
-        return productIds;
-    }*/
-
 }

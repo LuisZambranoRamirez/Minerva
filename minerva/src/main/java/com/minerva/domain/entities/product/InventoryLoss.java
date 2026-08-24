@@ -1,6 +1,9 @@
 package com.minerva.domain.entities.product;
 
-import com.minerva.domain.constants.ReasonProductLoss;
+import com.minerva.domain.constants.InventoryLossReason;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.exceptions.MinimumAmountException;
 import com.minerva.domain.exceptions.NullValueException;
@@ -10,20 +13,22 @@ import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.id.InventoryLossIdImpl;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class InventoryLoss extends Entity<InventoryLossId> {
 
     private final ProductId productId;
     private final ProductQuantity quantity;
-    private ReasonProductLoss reason;
+    private InventoryLossReason reason;
     private Observation observation;
     private final LocalDateTime registrationDate;
 
     public InventoryLoss(
             ProductId productId,
             ProductQuantity quantity,
-            ReasonProductLoss reason,
+            InventoryLossReason reason,
             String observation
     ) throws DomainException {
 
@@ -55,7 +60,7 @@ public class InventoryLoss extends Entity<InventoryLossId> {
         return Optional.ofNullable(observation);
     }
 
-    public ReasonProductLoss getReason() {
+    public InventoryLossReason getReason() {
         return reason;
     }
 
@@ -63,4 +68,40 @@ public class InventoryLoss extends Entity<InventoryLossId> {
         return registrationDate;
     }
 
+    @Override
+    public Map<String, Attribute<?>> getAttributes() {
+        Map<String, Attribute<?>> attributes = new HashMap<>();
+
+        attributes.put(
+                "inventoryLossId",
+                new DefaultStringAttribute(getId().asString())
+        );
+
+        attributes.put(
+                "productId",
+                new DefaultStringAttribute(productId.asString())
+        );
+
+        attributes.put(
+                "quantity",
+                quantity
+        );
+
+        attributes.put(
+                "reason",
+                reason
+        );
+
+        attributes.put(
+                "observation",
+                observation
+        );
+
+        attributes.put(
+                "registrationDate",
+                new DefaultDateTimeAttribute(registrationDate)
+        );
+
+        return attributes;
+    }
 }

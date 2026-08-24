@@ -1,14 +1,17 @@
 package com.minerva.domain.entities.user;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.minerva.domain.constants.Role;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.exceptions.*;
 import com.minerva.domain.services.PasswordHasher;
 import com.minerva.domain.valueObject.*;
 import com.minerva.domain.valueObject.DNI;
-import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.exceptions.NullValueException;
-import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.id.UserName;
 
@@ -45,8 +48,8 @@ public class User extends Entity<UserId> {
             this.role = role;
             this.isActive = isActive;
             this.registrationDate = registrationDate;
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al cargar el usuario", e);
+        } catch (InvalidDomainArgumentException e) {
+            throw new EntityRestoreException("Error al cargar el usuario", e);
         }
         super(tempUserName);
     }
@@ -77,5 +80,52 @@ public class User extends Entity<UserId> {
 
     public LocalDateTime getRegistrationDate() {
         return registrationDate;
+    }
+
+    @Override
+    public Map<String, Attribute<?>> getAttributes() {
+        Map<String, Attribute<?>> attributes = new HashMap<>();
+
+        attributes.put(
+                "userId",
+                new DefaultStringAttribute(getId().asString())
+        );
+
+        attributes.put(
+                "dni",
+                dni
+        );
+
+        attributes.put(
+                "fullName",
+                fullName
+        );
+
+        attributes.put(
+                "username",
+                username
+        );
+
+        attributes.put(
+                "passwordHash",
+                passwordHash
+        );
+
+        attributes.put(
+                "role",
+                role
+        );
+
+        attributes.put(
+                "isActive",
+                new DefaultStringAttribute(String.valueOf(isActive))
+        );
+
+        attributes.put(
+                "registrationDate",
+                new DefaultDateTimeAttribute(registrationDate)
+        );
+
+        return attributes;
     }
 }

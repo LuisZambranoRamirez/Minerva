@@ -1,7 +1,13 @@
 package com.minerva.domain.entities.stockEntry;
 
 import com.minerva.domain.entities.product.ProductId;
+import com.minerva.domain.entities.product.StockEntryProduct;
 import com.minerva.domain.entities.supplier.SupplierId;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.exceptions.EntityRestoreException;
+import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.valueObject.id.ProductIdImpl;
@@ -13,10 +19,12 @@ import com.minerva.domain.valueObject.id.StockEntryIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public class StockEntry extends Entity<StockEntryId> {
+public class StockEntry extends Entity<StockEntryId> implements StockEntryProduct {
 
     private final ProductId productId;
     private final SupplierId supplierId;
@@ -68,12 +76,13 @@ public class StockEntry extends Entity<StockEntryId> {
             this.quantity = new ProductQuantity(quantity);
             this.expirationDate = expirationDate;
             this.registrationDate = registrationDate;
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al crear la entrada de stock: " + e.getMessage(), e);
+        } catch (InvalidDomainArgumentException e) {
+            throw new EntityRestoreException("Error al crear la entrada de stock: " + e.getMessage(), e);
         }
         super(tempId);
     }
 
+    @Override
     public ProductId getProductId() {
         return productId;
     }
@@ -90,6 +99,7 @@ public class StockEntry extends Entity<StockEntryId> {
         return Optional.ofNullable(expirationDate);
     }
 
+    @Override
     public ProductQuantity getQuantity() {
         return quantity;
     }
@@ -98,4 +108,45 @@ public class StockEntry extends Entity<StockEntryId> {
         return registrationDate;
     }
 
+    @Override
+    public Map<String, Attribute<?>> getAttributes() {
+        Map<String, Attribute<?>> attributes = new HashMap<>();
+
+        attributes.put(
+                "stockEntryId",
+                new DefaultStringAttribute(getId().asString())
+        );
+
+        attributes.put(
+                "productId",
+                new DefaultStringAttribute(productId.asString())
+        );
+
+        attributes.put(
+                "supplierId",
+                new DefaultStringAttribute(supplierId.asString())
+        );
+
+        attributes.put(
+                "unitPrice",
+                unitPrice
+        );
+
+        attributes.put(
+                "quantity",
+                quantity
+        );
+
+        attributes.put(
+                "expirationDate",
+                new DefaultDateTimeAttribute(expirationDate)
+        );
+
+        attributes.put(
+                "registrationDate",
+                new DefaultDateTimeAttribute(registrationDate)
+        );
+
+        return attributes;
+    }
 }

@@ -3,6 +3,7 @@ package com.minerva.domain.entities.customer;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.entities.userAction.Attribute;
 import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.exceptions.EntityRestoreException;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.PhoneNumber;
@@ -15,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class Customer extends Entity<CustomerId> {
+public class    Customer extends Entity<CustomerId> {
     private final CustomerName customerName;
     // Puede ser null
     private PhoneNumber phoneNumber;
@@ -77,6 +78,11 @@ public class Customer extends Entity<CustomerId> {
     @Override
     public Map<String, Attribute<?>> getAttributes() {
         Map<String, Attribute<?>> attributes = new HashMap<>();
+
+        attributes.put(
+                "customerId",
+                new DefaultStringAttribute(getId().asString())
+        );
 
         attributes.put(
                 "customerName",

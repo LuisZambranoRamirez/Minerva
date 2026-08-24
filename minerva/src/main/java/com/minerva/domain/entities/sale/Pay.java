@@ -1,16 +1,18 @@
 package com.minerva.domain.entities.sale;
 
 import com.minerva.domain.constants.PaymentMethod;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.exceptions.*;
 import com.minerva.domain.valueObject.Money;
-import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.exceptions.MinimumAmountException;
-import com.minerva.domain.exceptions.NullValueException;
-import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.id.PayIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 class Pay extends Entity<PayId> {
@@ -33,12 +35,15 @@ class Pay extends Entity<PayId> {
     Pay(UUID payId, BigDecimal amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {
         PayIdImpl tempId;
         try {
+            if (paymentMethod == null) throw new InvalidDomainArgumentException("El método de pago no puede ser nulo");
+            if (registrationDate == null) throw new InvalidDomainArgumentException("La fecha de registro no puede ser nula");
+
             tempId = new PayIdImpl(payId);
             this.amount = new Money(amount);
             this.paymentMethod = paymentMethod;
             this.registrationDate = registrationDate;
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al crear el pago: " + e.getMessage(), e);
+        } catch (InvalidDomainArgumentException e) {
+            throw new EntityRestoreException("Error al crear el pago: " + e.getMessage(), e);
         }
         super(tempId);
     }
@@ -53,5 +58,32 @@ class Pay extends Entity<PayId> {
 
     public LocalDateTime getRegistrationDate() {
         return registrationDate;
+    }
+
+    @Override
+    public Map<String, Attribute<?>> getAttributes() {
+        Map<String, Attribute<?>> attributes = new HashMap<>();
+
+        attributes.put(
+                "payId",
+                new DefaultStringAttribute(getId().asString())
+        );
+
+        attributes.put(
+                "amount",
+                amount
+        );
+
+        attributes.put(
+                "paymentMethod",
+                paymentMethod
+        );
+
+        attributes.put(
+                "registrationDate",
+                new DefaultDateTimeAttribute(registrationDate)
+        );
+
+        return attributes;
     }
 }

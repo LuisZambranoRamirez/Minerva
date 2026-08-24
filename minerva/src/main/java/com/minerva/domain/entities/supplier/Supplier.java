@@ -1,5 +1,8 @@
 package com.minerva.domain.entities.supplier;
 
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.exceptions.EntityRestoreException;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.PhoneNumber;
@@ -10,6 +13,8 @@ import com.minerva.domain.valueObject.RUC;
 import com.minerva.domain.valueObject.id.SupplierName;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class Supplier extends Entity<SupplierId> {
@@ -48,7 +53,7 @@ public class Supplier extends Entity<SupplierId> {
             if (phoneNumber != null) {
                 this.phoneNumber = new PhoneNumber(phoneNumber);
             }
-        } catch (DomainException e) {
+        } catch (InvalidDomainArgumentException e) {
             throw new EntityRestoreException("Error al crear el proveedor: " + e.getMessage(), e);
         }        
         super(tempId);
@@ -81,6 +86,38 @@ public class Supplier extends Entity<SupplierId> {
 
     public Optional<PhoneNumber> getPhoneNumber() {
         return Optional.ofNullable(phoneNumber);
+    }
+
+    @Override
+    public Map<String, Attribute<?>> getAttributes() {
+        Map<String, Attribute<?>> attributes = new HashMap<>();
+
+        attributes.put(
+                "supplierId",
+                new DefaultStringAttribute(getId().asString())
+        );
+
+        attributes.put(
+                "supplierName",
+                supplierName
+        );
+
+        attributes.put(
+                "ruc",
+                ruc
+        );
+
+        attributes.put(
+                "phoneNumber",
+                phoneNumber
+        );
+
+        attributes.put(
+                "registrationDate",
+                new DefaultDateTimeAttribute(registrationDate)
+        );
+
+        return attributes;
     }
 }
 
