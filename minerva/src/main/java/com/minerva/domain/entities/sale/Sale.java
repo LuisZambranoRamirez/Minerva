@@ -72,7 +72,7 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     }
 
     @Override
-    public Map<String, Attribute<?>> getAttributes() {
+    public Map<String, Attribute<?>> extractAuditData() {
         return Map.of();
     }
 

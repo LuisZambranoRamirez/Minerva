@@ -29,13 +29,8 @@ public class Supplier extends Entity<SupplierId> {
         SupplierName tempId = new SupplierName(supplierName);
         super(tempId);
         this.supplierName = tempId;
-        if (ruc != null) {
-            this.ruc = new RUC(ruc);
-        }
-
-        if (phoneNumber != null) {
-            this.phoneNumber = new PhoneNumber(phoneNumber);
-        }
+        if (ruc != null) this.ruc = new RUC(ruc);
+        if (phoneNumber != null) this.phoneNumber = new PhoneNumber(phoneNumber);
         this.registrationDate = LocalDateTime.now();
     }
 
@@ -89,7 +84,7 @@ public class Supplier extends Entity<SupplierId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> getAttributes() {
+    public Map<String, Attribute<?>> extractAuditData() {
         Map<String, Attribute<?>> attributes = new HashMap<>();
 
         attributes.put(

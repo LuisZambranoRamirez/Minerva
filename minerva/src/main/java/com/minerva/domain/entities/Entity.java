@@ -1,13 +1,12 @@
 package com.minerva.domain.entities;
 
-import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.Auditable;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.id.Id;
 
-import java.util.Map;
 import java.util.Objects;
 
-public abstract class Entity<I extends Id<?>> {
+public abstract class Entity<I extends Id<?>> implements Auditable {
     private final I id;
 
     public Entity(I id) {
@@ -15,11 +14,10 @@ public abstract class Entity<I extends Id<?>> {
         this.id = id;
     }
 
-    public String getEntityName() {
+    @Override
+    public String getAuditSubject() {
         return getClass().getSimpleName();
     }
-
-    public abstract Map<String, Attribute<?>> getAttributes();
 
     public I getId() {
         return id;

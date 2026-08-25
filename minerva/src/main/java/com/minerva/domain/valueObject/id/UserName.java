@@ -1,9 +1,13 @@
 package com.minerva.domain.valueObject.id;
 
 import com.minerva.domain.entities.user.UserId;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.ValueObject;
 import com.minerva.domain.entities.userAction.StringAttribute;
+
+import java.util.Map;
 
 public final class UserName extends ValueObject<String> implements UserId, StringAttribute {
 
@@ -31,5 +35,10 @@ public final class UserName extends ValueObject<String> implements UserId, Strin
     @Override
     public String asString() {
         return getValue();
+    }
+
+    @Override
+    public Map<String, Attribute<?>> extractAuditData() {
+        return Map.of("UserId", new DefaultStringAttribute(asString()));
     }
 }

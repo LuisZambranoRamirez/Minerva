@@ -45,7 +45,7 @@ class ProductReturn extends Entity<ProductReturnId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> getAttributes() {
+    public Map<String, Attribute<?>> extractAuditData() {
         Map<String, Attribute<?>> attributes = new HashMap<>();
 
         attributes.put(

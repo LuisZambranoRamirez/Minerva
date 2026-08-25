@@ -1,7 +1,10 @@
 package com.minerva.domain.valueObject.id;
 
+import java.util.Map;
 import java.util.UUID;
 
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.entities.userAction.UserActionId;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
@@ -29,5 +32,10 @@ public class UserActionIdImpl extends ValueObject<UUID> implements UserActionId 
     @Override
     public String asString() {
         return getValue().toString();
+    }
+
+    @Override
+    public Map<String, Attribute<?>> extractAuditData() {
+        return Map.of("UserActionId", new DefaultStringAttribute(asString()));
     }
 }

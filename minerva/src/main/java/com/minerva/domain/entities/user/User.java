@@ -15,7 +15,7 @@ import com.minerva.domain.valueObject.DNI;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.id.UserName;
 
-public class User extends Entity<UserId> {
+public class User extends Entity<UserId> implements UserReader {
     private final DNI dni;
     private FullName fullName;
     private final UserName username;
@@ -54,36 +54,43 @@ public class User extends Entity<UserId> {
         super(tempUserName);
     }
 
+    public boolean authenticate(String password, PasswordHasher passwordHasher) {
+        if (!isActive) return false;
+        return passwordHasher.matches(password, passwordHash);
+    }
+
+    @Override
     public DNI getDni() {
         return dni;
     }
 
+    @Override
     public FullName getFullName() {
         return fullName;
     }
 
-    public PasswordHash getPasswordHash() {
-        return passwordHash;
-    }
-
+    @Override
     public UserName getUsername() {
         return username;
     }
 
+    @Override
     public Role getRole() {
         return role;
     }
 
+    @Override
     public boolean isActive() {
         return isActive;
     }
 
+    @Override
     public LocalDateTime getRegistrationDate() {
         return registrationDate;
     }
 
     @Override
-    public Map<String, Attribute<?>> getAttributes() {
+    public Map<String, Attribute<?>> extractAuditData() {
         Map<String, Attribute<?>> attributes = new HashMap<>();
 
         attributes.put(

@@ -236,7 +236,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
 
     // falta el sku
     @Override
-    public Map<String, Attribute<?>> getAttributes() {
+    public Map<String, Attribute<?>> extractAuditData() {
         Map<String, Attribute<?>> attributes = new HashMap<>();
 
         attributes.put(

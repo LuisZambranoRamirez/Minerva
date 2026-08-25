@@ -35,10 +35,6 @@ public class UserAction extends Entity<UserActionId> {
         return userId;
     }
 
-    public String getEntityName() {
-        return entity.getEntityName();
-    }
-
     public Permission getPermission() {
         return permission;
     }
@@ -48,7 +44,7 @@ public class UserAction extends Entity<UserActionId> {
     }
 
     public Map<String, Attribute<?>> getEntityData() {
-        return entity.getAttributes();
+        return entity.extractAuditData();
     }
 
     public LocalDateTime getRegistrationDate() {
@@ -56,7 +52,7 @@ public class UserAction extends Entity<UserActionId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> getAttributes() {
+    public Map<String, Attribute<?>> extractAuditData() {
         Map<String, Attribute<?>> attributes = new HashMap<>();
 
         attributes.put(
@@ -71,7 +67,7 @@ public class UserAction extends Entity<UserActionId> {
 
         attributes.put(
                 "entityName",
-                new DefaultStringAttribute(entity.getEntityName())
+                new DefaultStringAttribute(entity.getAuditSubject())
         );
 
         attributes.put(
@@ -81,7 +77,7 @@ public class UserAction extends Entity<UserActionId> {
 
         attributes.put(
                 "entityData",
-                new DefaultStringAttribute(entity.getAttributes().toString())
+                new DefaultStringAttribute(entity.extractAuditData().toString())
         );
 
         attributes.put(

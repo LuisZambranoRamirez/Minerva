@@ -1,10 +1,13 @@
 package com.minerva.domain.valueObject.id;
 
 import com.minerva.domain.entities.product.ProductId;
+import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.ValueObject;
 
+import java.util.Map;
 import java.util.UUID;
 
 public class ProductIdImpl extends ValueObject<UUID>  implements ProductId {
@@ -31,5 +34,10 @@ public class ProductIdImpl extends ValueObject<UUID>  implements ProductId {
     @Override
     public String asString() {
         return getValue().toString();
+    }
+
+    @Override
+    public Map<String, Attribute<?>> extractAuditData() {
+        return Map.of("ProductId", new DefaultStringAttribute(asString()));
     }
 }
