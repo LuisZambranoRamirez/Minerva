@@ -12,7 +12,7 @@ import com.minerva.domain.entities.sale.Sale;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.repositories.SaleRepository;
 import com.minerva.domain.repositories.UserRepository;
-import com.minerva.domain.entities.sale.Sale.SaleItem;
+import com.minerva.domain.entities.sale.Sale.SaleItemWriteDTO;
 import com.minerva.domain.valueObject.id.SaleIdImpl;
 import com.minerva.domain.valueObject.id.UserName;
 import com.minerva.domain.repositories.CustomerRepository;
@@ -38,7 +38,7 @@ public class SaleService extends Service {
     // --------------------- WRITE ---------------------
 
 
-    public Result<Void> registerSale(String customerId, List<Sale.PayData> pays, List<SaleItem> items) throws UnauthorizedActionException {
+    public Result<Void> registerSale(String customerId, List<Sale.PayData> pays, List<SaleItemWriteDTO> items) throws UnauthorizedActionException {
         if (getUserRole().lacksPermission(Permission.SALE_REGISTER)) 
             throw new UnauthorizedActionException("El usuario no tiene permiso para registrar ventas.");
 

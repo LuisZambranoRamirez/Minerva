@@ -1,10 +1,11 @@
 package com.minerva.domain.valueObject.id;
 
 import com.minerva.domain.entities.supplier.SupplierId;
+import com.minerva.domain.entities.userAction.StringAttribute;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.ValueObject;
 
-public class SupplierName extends ValueObject<String> implements SupplierId {
+public class SupplierName extends ValueObject<String> implements SupplierId, StringAttribute {
     private static final int MIN_LENGTH = 3;
     private static final int MAX_LENGTH = 100;
 
@@ -23,6 +24,11 @@ public class SupplierName extends ValueObject<String> implements SupplierId {
 
     @Override
     public String asString() {
+        return getValue();
+    }
+
+    @Override
+    public String getAttribute() {
         return getValue();
     }
 }

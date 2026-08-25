@@ -3,6 +3,7 @@ package com.minerva.application.service;
 import java.util.Optional;
 
 import com.minerva.domain.constants.Role;
+import com.minerva.domain.entities.user.UserReader;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.entities.user.User;
 import com.minerva.domain.exceptions.DomainException;
@@ -20,10 +21,10 @@ public class UserService {
     }
 
     // --------------------- WRITE ---------------------
-    public Result<Void> register(String dni, String names, String lastNames, String username, String password, Role role) {
+    public Result<Void> register(String dni, String fullname, String username, String password, Role role) {
         User userCreated;
         try {
-            userCreated = new User(passwordHasher, dni, names, lastNames, username, password, role);
+            userCreated = new User(passwordHasher, dni, fullname, username, password, role);
         } catch (DomainException e) {
             return Result.fail(e.getMessage());
         }
@@ -38,8 +39,7 @@ public class UserService {
         return Result.success(null);
     }
 
-    // aqui devolveria un token de autenticacion, pero por simplicidad devolvere un Result<Void>
-    public Result<Role> authenticate(String username, String password) {
+    public Result<UserReader> authenticate(String username, String password) {
         UserName userName;
         try {
             userName = new UserName(username);
@@ -49,18 +49,15 @@ public class UserService {
 
         Optional<User> userOptional = userRepository.findById(userName);
 
-        if (userOptional.isEmpty())
-            return Result.fail("Credenciales invalidas");
+        if (userOptional.isEmpty()) return Result.fail("Credenciales invalidas");
 
         User user = userOptional.get();
 
-        if (!user.isActive())
+        if (user.authenticate(password, passwordHasher)) {
+            return Result.success(user);
+        } else {
             return Result.fail("Credenciales invalidas");
-
-        if (passwordHasher.matches(password, user.getPasswordHash()))
-            return Result.success(user.getRole());
-        else
-            return Result.fail("Credenciales invalidas");
+        }
     }
 
 }

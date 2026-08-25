@@ -1,7 +1,7 @@
 package com.minerva.application.service;
 
 import com.minerva.application.port.drivers.ProductUseCase;
-import com.minerva.domain.constants.Category;
+import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.GainStrategy;
 import com.minerva.domain.constants.Permission;
 import com.minerva.domain.constants.Role;
@@ -41,7 +41,7 @@ public class ProductService extends Service implements ProductUseCase {
                                         BigDecimal reorderLevel,
                                         String barCode,
                                         SaleType saleType,
-                                        Category category,
+                                        ProductCategory productCategory,
                                         String purchasedFromSupplierId,
                                         BigDecimal purchaseUnitPrice,
                                         BigDecimal purchaseQuantity,
@@ -54,7 +54,7 @@ public class ProductService extends Service implements ProductUseCase {
         Product productCreated;
         StockEntry stockEntryCreated;
         try {
-            productCreated = new Product(productName, gainStrategy, gainAmount, reorderLevel, barCode, saleType, purchaseQuantity, category, purchaseUnitPrice);
+            productCreated = new Product(productName, gainStrategy, gainAmount, reorderLevel, barCode, saleType, purchaseQuantity, productCategory, purchaseUnitPrice);
             stockEntryCreated = new StockEntry(productName, purchasedFromSupplierId, purchaseUnitPrice, purchaseQuantity, purchaseExpirationDate);
         } catch (DomainException e) {
             return Result.fail(e.getMessage());
