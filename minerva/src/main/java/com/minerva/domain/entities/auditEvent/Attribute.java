@@ -1,16 +1,17 @@
 package com.minerva.domain.entities.auditEvent;
 
-import com.minerva.domain.exceptions.NullValueException;
+import com.minerva.domain.exceptions.UnexpectedDomainException;
+import com.minerva.domain.valueObject.id.Id;
 
 import java.util.Objects;
 import java.util.Optional;
 
-public sealed  abstract class Attribute<V> permits BooleanAttribute, DateTimeAttribute, NumericAttribute, StringAttribute {
+public sealed abstract class Attribute<A> permits BooleanAttribute, NumericAttribute, StringAttribute {
     private final String name;
-    private final V attributeValue;
+    private final A attributeValue;
 
-    protected Attribute(String name, V attributeValue) throws NullValueException {
-        if (name == null) throw new NullValueException("El nombre del atributo no puede ser nulo.");
+    protected Attribute(String name, A attributeValue) {
+        if (name == null) throw new UnexpectedDomainException("El nombre del atributo no puede ser nulo.");
         this.name = name;
         this.attributeValue = attributeValue;
     }
@@ -19,7 +20,7 @@ public sealed  abstract class Attribute<V> permits BooleanAttribute, DateTimeAtt
         return name;
     }
 
-    public Optional<V> getAttributeValue() {
+    public Optional<A> getAttributeValue() {
         return Optional.ofNullable(attributeValue);
     }
 
