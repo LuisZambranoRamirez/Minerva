@@ -1,12 +1,7 @@
 package com.minerva.domain.constants;
 
-import com.minerva.domain.entities.userAction.StringAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 
-public enum InventoryLossReason implements StringAttribute {
+public enum InventoryLossReason {
     DAÑADO, VENCIMIENTO, PERDIDO, ROBO, OTROS;
-
-    @Override
-    public String getAttribute() {
-        return name();
-    }
 }

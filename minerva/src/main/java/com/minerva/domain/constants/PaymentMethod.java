@@ -1,12 +1,5 @@
 package com.minerva.domain.constants;
 
-import com.minerva.domain.entities.userAction.StringAttribute;
-
-public enum PaymentMethod implements StringAttribute {
+public enum PaymentMethod {
     EFECTIVO, DIGITAL;
-
-    @Override
-    public String getAttribute() {
-        return name();
-    }
 }

@@ -1,8 +1,6 @@
 package com.minerva.domain.constants;
 
-import com.minerva.domain.entities.userAction.StringAttribute;
-
-public enum Permission implements StringAttribute {
+public enum Permission {
 
     // Customer - Write
     CUSTOMER_REGISTER,
@@ -56,9 +54,4 @@ public enum Permission implements StringAttribute {
     USER_FIND_BY_USERNAME,
     USER_FIND_BY_ID,
     USER_FIND_ALL;
-
-    @Override
-    public String getAttribute() {
-        return name();
-    }
 }
