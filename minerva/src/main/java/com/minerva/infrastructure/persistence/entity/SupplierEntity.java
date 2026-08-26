@@ -1,37 +1,33 @@
 package com.minerva.infrastructure.persistence.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+@Entity
+@Table(name = "supplier")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "supplier")
+@Builder
 public class SupplierEntity {
 
     @Id
-    @Column(name = "supplierNameId", length = 100)
-    private String supplierNameId;
+    @Column(name = "supplier_id", nullable = false)
+    private UUID supplierId;
 
-    @Column(name = "ruc", columnDefinition = "CHAR(11)", unique = true)
+    @Column(name = "supplier_name", nullable = false, length = 100, unique = true)
+    private String supplierName;
+
+    @Column(name = "ruc", length = 11, unique = true)
     private String ruc;
 
-    @Column(name = "phoneNumber", columnDefinition = "CHAR(9)", unique = true)
+    @Column(name = "phone_number", length = 9, unique = true)
     private String phoneNumber;
 
-    @Column(
-            name = "registrationDate",
-            columnDefinition = "TIMESTAMP"
-    )
+    @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
 }

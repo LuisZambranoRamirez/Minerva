@@ -6,51 +6,56 @@ import lombok.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+@Entity
+@Table(name = "unit_to_bulk")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-@Entity
-@Table(name = "unitToBulk")
+@AllArgsConstructor
+@Builder
 public class UnitToBulkEntity {
 
     @EmbeddedId
     private UnitToBulkId id;
 
-    @ManyToOne
-    @MapsId("unitProductNameId")  // Vincula FK con la PK embebida
-    @JoinColumn(name = "unitProductNameId", nullable = false)
-    private ProductEntity unitProductEntity;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId("bulkProductId")
+    @JoinColumn(
+            name = "bulk_product_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_bulk_product")
+    )
+    private ProductEntity bulkProduct;
 
-    @ManyToOne
-    @MapsId("bulkProductNameId")  // Vincula FK con la PK embebida
-    @JoinColumn(name = "bulkProductNameId", nullable = false, unique = true)
-    private ProductEntity bulkProductEntity;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId("unitProductId")
+    @JoinColumn(
+            name = "unit_product_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_unit_product")
+    )
+    private ProductEntity unitProduct;
 
     @Column(name = "quantity", precision = 10, scale = 3, nullable = false)
     private BigDecimal quantity;
 
-    @Column(
-            name = "registrationDate",
-            nullable = false,
-            updatable = false,
-            columnDefinition = "TIMESTAMP"
-    )
+    @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
 
+    @Embeddable
     @Getter
     @Setter
-    @AllArgsConstructor
     @NoArgsConstructor
+    @AllArgsConstructor
     @EqualsAndHashCode
-    @Embeddable
     public static class UnitToBulkId implements Serializable {
 
-        @Column(name = "unitProductNameId", length = 100, nullable = false)
-        private String unitProductNameId;
+        @Column(name = "bulk_product_id")
+        private UUID bulkProductId;
 
-        @Column(name = "bulkProductNameId", length = 100, nullable = false)
-        private String bulkProductNameId;
+        @Column(name = "unit_product_id")
+        private UUID unitProductId;
     }
 }

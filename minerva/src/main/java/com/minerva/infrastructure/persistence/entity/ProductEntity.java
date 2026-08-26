@@ -1,61 +1,59 @@
 package com.minerva.infrastructure.persistence.entity;
 
-import com.minerva.domain.constants.Category;
 import com.minerva.domain.constants.GainStrategy;
+import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.SaleType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Table(name = "product")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProductEntity {
 
     @Id
-    @Column(name = "productNameId", length = 100)
-    private String productNameId;
+    @Column(name = "product_id")
+    private UUID productId;
+
+    @Column(name = "sku", length = 100, nullable = false, unique = true)
+    private String sku;
+
+    @Column(name = "product_name", length = 100, nullable = false, unique = true)
+    private String productName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gainStrategy", nullable = false)
+    @Column(name = "gain_strategy", nullable = false)
     private GainStrategy gainStrategy;
 
-    @Column(name = "gainAmount", precision = 10, scale = 2, nullable = false)
+    @Column(name = "gain_amount", precision = 10, scale = 2, nullable = false)
     private BigDecimal gainAmount;
-
-    @Column(name = "price", precision = 10, scale = 2, nullable = false)
-    private BigDecimal price;
 
     @Column(name = "stock", precision = 10, scale = 3, nullable = false)
     private BigDecimal stock;
 
-    @Column(name = "reorderLevel", precision = 10, scale = 3)
+    @Column(name = "reorder_level", precision = 10, scale = 3)
     private BigDecimal reorderLevel;
 
-    @Column(name = "barCode", columnDefinition = "CHAR(13)", unique = true)
+    @Column(name = "bar_code", length = 13, unique = true)
     private String barCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "saleType", nullable = false)
+    @Column(name = "sale_type", nullable = false)
     private SaleType saleType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
-    private Category category;
+    private ProductCategory category;
 
-    @Column(
-            name = "registrationDate",
-            nullable = false,
-            columnDefinition = "TIMESTAMP"
-    )
+    @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
 }
 

@@ -1,36 +1,43 @@
 package com.minerva.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
+@Entity
+@Table(name = "sale_detail")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "saleDetail")
+@Builder
 public class SaleDetailEntity {
 
     @Id
-    @Column(name = "saleDetailId")
-    private String saleDetailId;
+    @Column(name = "sale_detail_id")
+    private UUID saleDetailId;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "saleId", nullable = false)
-    private SaleEntity saleEntity;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "id_sale",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_sale_detail_sale")
+    )
+    private SaleEntity sale;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "productNameId", nullable = false)
-    private ProductEntity productEntity;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "id_product",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_sale_detail_product")
+    )
+    private ProductEntity product;
 
     @Column(name = "quantity", precision = 10, scale = 3, nullable = false)
     private BigDecimal quantity;
 
-    @Column(name = "unitPrice", precision = 10, scale = 2, nullable = false)
+    @Column(name = "unit_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitPrice;
 }

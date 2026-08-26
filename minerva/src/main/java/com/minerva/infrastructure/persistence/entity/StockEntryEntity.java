@@ -1,46 +1,50 @@
 package com.minerva.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+@Entity
+@Table(name = "stock_entry")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "stockEntry")
+@Builder
 public class StockEntryEntity {
 
     @Id
-    @Column(name = "stockEntryId")
-    private String stockEntryId;
+    @Column(name = "stock_entry_id", nullable = false)
+    private UUID stockEntryId;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "productNameId", nullable = false)
-    private ProductEntity productEntity;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "id_product",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_stock_entry_product")
+    )
+    private ProductEntity product;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "supplierNameId", nullable = false)
-    private SupplierEntity supplierEntity;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "id_supplier",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_stock_entry_supplier")
+    )
+    private SupplierEntity supplier;
 
-    @Column(name = "unitPrice", precision = 10, scale = 2, nullable = false)
+    @Column(name = "unit_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitPrice;
 
     @Column(name = "quantity", precision = 10, scale = 3, nullable = false)
     private BigDecimal quantity;
 
-    @Column(name = "expirationDate", nullable = false)
+    @Column(name = "expiration_date")
     private LocalDateTime expirationDate;
 
-    @Column(
-            name = "registrationDate",
-            columnDefinition = "TIMESTAMP"
-    )
+    @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
 }
