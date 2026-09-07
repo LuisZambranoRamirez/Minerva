@@ -1,6 +1,9 @@
 -- ==========================
 -- ENUMS
 -- ==========================
+CREATE TYPE modifier AS ENUM (
+    'FRIO'
+);
 
 CREATE TYPE gain_strategy AS ENUM (
     'PORCENTAJE',
@@ -114,7 +117,7 @@ CREATE TABLE personal (
     lastnames VARCHAR(100) NOT NULL,
     phone_number CHAR(9) NOT NULL UNIQUE,
     email VARCHAR(150) NOT NULL UNIQUE,
-    active BOOLEAN NOT NULL,
+    is_active BOOLEAN NOT NULL,
     registration_date TIMESTAMP NOT NULL
 );
 
@@ -123,7 +126,7 @@ CREATE TABLE app_user (
     dni CHAR(8) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role_name role NOT NULL,
-    active BOOLEAN NOT NULL,
+    is_active BOOLEAN NOT NULL,
     registration_date TIMESTAMP NOT NULL,
 
     CONSTRAINT fk_app_user_personal
@@ -325,22 +328,13 @@ CREATE TABLE product_return (
 );
 
 -- ==========================
--- MODIFICADORES
--- ==========================
-
-CREATE TABLE modifier (
-    modifier_name_id VARCHAR(100) PRIMARY KEY,
-    registration_date TIMESTAMP NOT NULL
-);
-
--- ==========================
 -- PRODUCTO - MODIFICADOR
 -- Relación N:M
 -- ==========================
 
 CREATE TABLE product_modifier (
     id_product UUID NOT NULL,
-    id_modifier_name VARCHAR(100) NOT NULL,
+    id_modifier_name modifier NOT NULL,
 
     extra_price NUMERIC(10,2) NOT NULL,
 
@@ -352,12 +346,6 @@ CREATE TABLE product_modifier (
         FOREIGN KEY (id_product)
         REFERENCES product(product_id)
         ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_product_modifier_modifier
-        FOREIGN KEY (id_modifier_name)
-        REFERENCES modifier(modifier_name_id)
-        ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
 
@@ -368,7 +356,7 @@ CREATE TABLE product_modifier (
 
 CREATE TABLE sale_detail_modifier (
     id_sale_detail UUID NOT NULL,
-    id_modifier_name VARCHAR(100) NOT NULL,
+    id_modifier_name modifier NOT NULL,
 
     quantity NUMERIC(10,3) NOT NULL,
     extra_price NUMERIC(10,2) NOT NULL,
@@ -378,12 +366,6 @@ CREATE TABLE sale_detail_modifier (
     CONSTRAINT fk_sale_detail_modifier_detail
         FOREIGN KEY (id_sale_detail)
         REFERENCES sale_detail(sale_detail_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_sale_detail_modifier_modifier
-        FOREIGN KEY (id_modifier_name)
-        REFERENCES modifier(modifier_name_id)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
