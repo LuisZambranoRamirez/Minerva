@@ -1,13 +1,4 @@
 -- ==========================
--- CREAR BASE DE DATOS
--- ==========================
-
-CREATE DATABASE apolo;
-
--- Conectarse a la base de datos
--- \c apolo
-
--- ==========================
 -- ENUMS
 -- ==========================
 
@@ -117,26 +108,69 @@ CREATE TYPE return_reason AS ENUM (
 -- TABLAS
 -- ==========================
 
-CREATE TABLE app_user (
-    user_name VARCHAR(30) PRIMARY KEY,
-    dni CHAR(8) UNIQUE NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role_name role NOT NULL,
-    is_active BOOLEAN NOT NULL,
+CREATE TABLE personal (
+    dni CHAR(8) PRIMARY KEY,
+    names VARCHAR(100) NOT NULL,
+    lastnames VARCHAR(100) NOT NULL,
+    phone_number CHAR(9) NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    active BOOLEAN NOT NULL,
     registration_date TIMESTAMP NOT NULL
 );
 
-CREATE TABLE user_action (
-    user_action_id UUID PRIMARY KEY,
-    user_name VARCHAR(30) NOT NULL,
-    permission permission NOT NULL,
-    entity_id TEXT NOT NULL,
-    entity_name TEXT NOT NULL,
-    entity_data JSONB NOT NULL,
+CREATE TABLE app_user (
+    user_name VARCHAR(30) PRIMARY KEY,
+    dni CHAR(8) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role_name role NOT NULL,
+    active BOOLEAN NOT NULL,
     registration_date TIMESTAMP NOT NULL,
 
-    CONSTRAINT fk_user_action_user
+    CONSTRAINT fk_app_user_personal
+        FOREIGN KEY (dni)
+        REFERENCES personal(dni)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
+-- ==========================
+-- VENDEDOR
+-- ==========================
+
+CREATE TABLE seller (
+    dni CHAR(8) PRIMARY KEY,
+
+    CONSTRAINT fk_seller_personal
+        FOREIGN KEY (dni)
+        REFERENCES personal(dni)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+-- ==========================
+-- ALMACENISTA
+-- ==========================
+
+CREATE TABLE warehouse_keeper (
+    dni CHAR(8) PRIMARY KEY,
+
+    CONSTRAINT fk_warehouse_keeper_personal
+        FOREIGN KEY (dni)
+        REFERENCES personal(dni)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE audit_event (
+    audit_event_id UUID PRIMARY KEY,
+    user_name VARCHAR(30) NOT NULL,
+    permission permission NOT NULL,
+    subject_id TEXT NOT NULL,
+    subject_name TEXT NOT NULL,
+    subject_data JSONB NOT NULL,
+    registration_date TIMESTAMP NOT NULL,
+
+    CONSTRAINT fk_audit_event_user
         FOREIGN KEY (user_name)
         REFERENCES app_user(user_name)
         ON DELETE RESTRICT
@@ -144,14 +178,16 @@ CREATE TABLE user_action (
 );
 
 CREATE TABLE supplier (
-    supplier_name_id VARCHAR(100) PRIMARY KEY,
+    supplier_id UUID PRIMARY KEY,
+    supplier_name VARCHAR(100) NOT NULL UNIQUE,
     ruc CHAR(11) UNIQUE,
     phone_number CHAR(9) UNIQUE,
     registration_date TIMESTAMP NOT NULL
 );
 
 CREATE TABLE customer (
-    customer_name_id VARCHAR(50) PRIMARY KEY,
+    customer_id UUID PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL UNIQUE,
     phone_number CHAR(9) UNIQUE,
     registration_date TIMESTAMP NOT NULL
 );
@@ -194,7 +230,7 @@ CREATE TABLE unit_to_bulk (
 CREATE TABLE stock_entry (
     stock_entry_id UUID PRIMARY KEY,
     id_product UUID NOT NULL,
-    id_supplier_name VARCHAR(100) NOT NULL,
+    id_supplier UUID NOT NULL,
     unit_price NUMERIC(10,2) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
     expiration_date TIMESTAMP,
@@ -207,20 +243,20 @@ CREATE TABLE stock_entry (
         ON UPDATE CASCADE,
 
     CONSTRAINT fk_stock_entry_supplier
-        FOREIGN KEY (id_supplier_name)
-        REFERENCES supplier(supplier_name_id)
+        FOREIGN KEY (id_supplier)
+        REFERENCES supplier(supplier_id)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
 
 CREATE TABLE sale (
     sale_id UUID PRIMARY KEY,
-    id_customer_name VARCHAR(50) NOT NULL,
+    customer_id UUID NOT NULL,
     registration_date TIMESTAMP NOT NULL,
 
     CONSTRAINT fk_sale_customer
-        FOREIGN KEY (id_customer_name)
-        REFERENCES customer(customer_name_id)
+        FOREIGN KEY (customer_id)
+        REFERENCES customer(customer_id)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -289,14 +325,111 @@ CREATE TABLE product_return (
 );
 
 -- ==========================
+-- MODIFICADORES
+-- ==========================
+
+CREATE TABLE modifier (
+    modifier_name_id VARCHAR(100) PRIMARY KEY,
+    registration_date TIMESTAMP NOT NULL
+);
+
+-- ==========================
+-- PRODUCTO - MODIFICADOR
+-- Relación N:M
+-- ==========================
+
+CREATE TABLE product_modifier (
+    id_product UUID NOT NULL,
+    id_modifier_name VARCHAR(100) NOT NULL,
+
+    extra_price NUMERIC(10,2) NOT NULL,
+
+    registration_date TIMESTAMP NOT NULL,
+
+    PRIMARY KEY (id_product, id_modifier_name),
+
+    CONSTRAINT fk_product_modifier_product
+        FOREIGN KEY (id_product)
+        REFERENCES product(product_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_product_modifier_modifier
+        FOREIGN KEY (id_modifier_name)
+        REFERENCES modifier(modifier_name_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
+
+-- ==========================
+-- MODIFICADORES DE LA VENTA
+-- ==========================
+
+CREATE TABLE sale_detail_modifier (
+    id_sale_detail UUID NOT NULL,
+    id_modifier_name VARCHAR(100) NOT NULL,
+
+    quantity NUMERIC(10,3) NOT NULL,
+    extra_price NUMERIC(10,2) NOT NULL,
+
+    PRIMARY KEY (id_sale_detail, id_modifier_name),
+
+    CONSTRAINT fk_sale_detail_modifier_detail
+        FOREIGN KEY (id_sale_detail)
+        REFERENCES sale_detail(sale_detail_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_sale_detail_modifier_modifier
+        FOREIGN KEY (id_modifier_name)
+        REFERENCES modifier(modifier_name_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
+-- ==========================
+-- ROL - PERMISO
+-- Relación N:M
+-- ==========================
+
+CREATE TABLE role_permission (
+    id_role role NOT NULL,
+    id_permission permission NOT NULL,
+
+    PRIMARY KEY (id_role, id_permission)
+);
+
+-- ==========================
+-- USUARIO - PERMISO
+-- Permisos específicos
+-- ==========================
+
+CREATE TABLE user_permission (
+    id_user VARCHAR(30) NOT NULL,
+    id_permission permission NOT NULL,
+
+    is_allowed BOOLEAN NOT NULL,
+
+    registration_date TIMESTAMP NOT NULL,
+
+    PRIMARY KEY (id_user, id_permission),
+
+    CONSTRAINT fk_user_permission_user
+        FOREIGN KEY (id_user)
+        REFERENCES app_user(user_name)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+-- ==========================
 -- DATOS INICIALES
 -- ==========================
 
-INSERT INTO supplier (supplier_name_id, registration_date)
-VALUES ('anonimo', NOW());
+INSERT INTO supplier (supplier_id, supplier_name, registration_date)
+VALUES (gen_random_uuid(), 'anonimo', NOW());
 
-INSERT INTO customer (customer_name_id, registration_date)
-VALUES ('anonimo', NOW());
+INSERT INTO customer (customer_id, full_name, registration_date)
+VALUES (gen_random_uuid(), 'anonimo', NOW());
 
 -- ==========================
 -- AUDITORIA 
@@ -312,146 +445,3 @@ CREATE TABLE exception_log (
     stack_trace     TEXT,
     occurred_at     TIMESTAMP NOT NULL
 );
-
-CREATE TABLE audit_log (
-    audit_id BIGSERIAL PRIMARY KEY,
-    table_name TEXT NOT NULL,
-    operation CHAR(1) NOT NULL CHECK (operation IN ('I', 'U', 'D')),
-    record_id TEXT,
-    old_data JSONB,
-    new_data JSONB,
-    user_name TEXT,
-    audit_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE FUNCTION audit_trigger()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    entity_id TEXT;
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        entity_id := to_jsonb(NEW)->>TG_ARGV[0];
-
-        INSERT INTO audit_log(
-            table_name,
-            operation,
-            record_id,
-            user_name,
-            new_data
-        )
-        VALUES (
-            TG_TABLE_NAME,
-            'I',
-            entity_id,
-            current_user,
-            to_jsonb(NEW)
-        );
-
-        RETURN NEW;
-
-    ELSIF TG_OP = 'UPDATE' THEN
-        entity_id := to_jsonb(NEW)->>TG_ARGV[0];
-
-        INSERT INTO audit_log(
-            table_name,
-            operation,
-            record_id,
-            old_data,
-            new_data,
-            user_name
-        )
-        VALUES (
-            TG_TABLE_NAME,
-            'U',
-            entity_id,
-            to_jsonb(OLD),
-            to_jsonb(NEW),
-            current_user
-        );
-
-        RETURN NEW;
-
-    ELSE
-        entity_id := to_jsonb(OLD)->>TG_ARGV[0];
-
-        INSERT INTO audit_log(
-            table_name,
-            operation,
-            record_id,
-            old_data,
-            user_name
-        )
-        VALUES (
-            TG_TABLE_NAME,
-            'D',
-            entity_id,
-            to_jsonb(OLD),
-            current_user
-        );
-
-        RETURN OLD;
-    END IF;
-END;
-$$;
-
-CREATE TRIGGER trg_audit_app_user
-AFTER INSERT OR UPDATE OR DELETE ON app_user
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('user_name');
-
-CREATE TRIGGER trg_audit_supplier
-AFTER INSERT OR UPDATE OR DELETE ON supplier
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('supplier_name_id');
-
-CREATE TRIGGER trg_audit_customer
-AFTER INSERT OR UPDATE OR DELETE ON customer
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('customer_name_id');
-
-CREATE TRIGGER trg_audit_product
-AFTER INSERT OR UPDATE OR DELETE ON product
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('product_id');
-
-CREATE TRIGGER trg_audit_unit_to_bulk
-AFTER INSERT OR UPDATE OR DELETE ON unit_to_bulk
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('bulk_product_id');
-
-CREATE TRIGGER trg_audit_stock_entry
-AFTER INSERT OR UPDATE OR DELETE ON stock_entry
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('stock_entry_id');
-
-CREATE TRIGGER trg_audit_sale
-AFTER INSERT OR UPDATE OR DELETE ON sale
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('sale_id');
-
-CREATE TRIGGER trg_audit_sale_detail
-AFTER INSERT OR UPDATE OR DELETE ON sale_detail
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('sale_detail_id');
-
-CREATE TRIGGER trg_audit_inventory_loss
-AFTER INSERT OR UPDATE OR DELETE ON inventory_loss
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('inventory_loss_id');
-
-CREATE TRIGGER trg_audit_pay
-AFTER INSERT OR UPDATE OR DELETE ON pay
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('pay_id');
-
-CREATE TRIGGER trg_audit_product_return
-AFTER INSERT OR UPDATE OR DELETE ON product_return
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('product_return_id');
-
-CREATE TRIGGER trg_audit_user_action
-AFTER INSERT OR UPDATE OR DELETE ON user_action
-FOR EACH ROW
-EXECUTE FUNCTION audit_trigger('user_action_id');
