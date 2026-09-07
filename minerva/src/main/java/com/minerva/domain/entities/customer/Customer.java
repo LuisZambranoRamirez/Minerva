@@ -1,51 +1,47 @@
 package com.minerva.domain.entities.customer;
 
 import com.minerva.domain.entities.Entity;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.EntityRestoreException;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
+import com.minerva.domain.valueObject.FullName;
 import com.minerva.domain.valueObject.PhoneNumber;
 import com.minerva.domain.services.Result;
-import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.valueObject.id.CustomerName;
+import com.minerva.domain.valueObject.id.CustomerIdImpl;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-public class    Customer extends Entity<CustomerId> {
-    private final CustomerName customerName;
+public class Customer extends Entity<CustomerId> {
+    private final FullName fullName;
     // Puede ser null
     private PhoneNumber phoneNumber;
     // ------------
     private final LocalDateTime registrationDate;
 
-    public Customer(String customerName, String phoneNumber) throws InvalidDomainArgumentException {
-        CustomerName customerNameValue = new CustomerName(customerName);
-        super(customerNameValue);
-        this.customerName = customerNameValue;
-        if (phoneNumber != null) this.phoneNumber = new PhoneNumber(phoneNumber);
+    public Customer(String fullName, String phoneNumber) throws InvalidDomainArgumentException {
+        super(CustomerIdImpl.generate());
+        this.fullName = new FullName(fullName);
         this.registrationDate = LocalDateTime.now();
+        if (phoneNumber != null) this.phoneNumber = new PhoneNumber(phoneNumber);
     }
 
-    public Customer(String customerName, LocalDateTime registrationDate, String phoneNumber) {
-        CustomerName customerNameValue;
+    public Customer(UUID customerId, String fullName, LocalDateTime registrationDate, String phoneNumber) {
+        CustomerId customerIdValue;
         try {
-            customerNameValue = new CustomerName(customerName);
-            this.customerName = customerNameValue;
+            customerIdValue = new CustomerIdImpl(customerId);
+            this.fullName = new FullName(fullName);
             this.registrationDate = registrationDate;
             if (phoneNumber != null) this.phoneNumber = new PhoneNumber(phoneNumber);
-        } catch (DomainException e) {
+        } catch (InvalidDomainArgumentException e) {
             throw new EntityRestoreException("Error al crear el cliente: " + e.getMessage(), e);
         }
-        super(customerNameValue);
+        super(customerIdValue);
     }
 
-    public CustomerName getCustomerName() {
-        return customerName;
+    public FullName getFullName() {
+        return fullName;
     }
 
     public Optional<PhoneNumber> getPhoneNumber() {
@@ -76,29 +72,12 @@ public class    Customer extends Entity<CustomerId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "customerId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new StringAttribute(fullName),
+                new StringAttribute(phoneNumber),
+                new StringAttribute("registration_date", registrationDate)
         );
-
-        attributes.put(
-                "customerName",
-                customerName
-        );
-
-        attributes.put(
-                "phoneNumber",
-                phoneNumber
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }
