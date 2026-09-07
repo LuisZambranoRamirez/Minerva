@@ -74,10 +74,10 @@ public class Customer extends Entity<CustomerId> {
     @Override
     public Set<Attribute<?>> getAuditData() {
         return Set.of(
-                new StringAttribute(getId()),
-                new StringAttribute(fullName),
-                new StringAttribute(phoneNumber),
-                new StringAttribute("registration_date", registrationDate)
+            new StringAttribute(getId()),
+            new StringAttribute(fullName),
+            new StringAttribute(phoneNumber),
+            new StringAttribute("registration_date", registrationDate)
         );
     }
 }
