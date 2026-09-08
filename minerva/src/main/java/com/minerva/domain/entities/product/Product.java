@@ -238,14 +238,14 @@ public class Product extends Entity<ProductId> implements ProductSale {
                 new StringAttribute(productName),
                 new NumericAttribute("stock", stock),
                 new StringAttribute(getGainStrategy()),
-                new NumericAttribute("gain_amount", getGainAmount()),
-                new NumericAttribute("reorder_level", reorderLevel),
+                new NumericAttribute("gainAmount", getGainAmount()),
+                new NumericAttribute("reorderLevel", reorderLevel),
                 new StringAttribute(barCode),
                 new StringAttribute(saleType),
                 new NumericAttribute("cost", cost),
                 new NumericAttribute("price", calculatePrice()),
                 new StringAttribute(productCategory),
-                new StringAttribute("registration_date", registrationDate)
+                new StringAttribute("registrationDate", registrationDate)
         );
     }
 }

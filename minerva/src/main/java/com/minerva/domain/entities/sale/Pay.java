@@ -1,9 +1,9 @@
 package com.minerva.domain.entities.sale;
 
 import com.minerva.domain.constants.PaymentMethod;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.*;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.entities.Entity;
@@ -11,8 +11,7 @@ import com.minerva.domain.valueObject.id.PayIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 class Pay extends Entity<PayId> {
@@ -61,29 +60,12 @@ class Pay extends Entity<PayId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "payId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new NumericAttribute(amount),
+                new StringAttribute(paymentMethod),
+                new StringAttribute("registrationDate", registrationDate)
         );
-
-        attributes.put(
-                "amount",
-                amount
-        );
-
-        attributes.put(
-                "paymentMethod",
-                paymentMethod
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }

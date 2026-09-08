@@ -77,7 +77,7 @@ public class Customer extends Entity<CustomerId> {
             new StringAttribute(getId()),
             new StringAttribute(fullName),
             new StringAttribute(phoneNumber),
-            new StringAttribute("registration_date", registrationDate)
+            new StringAttribute("registrationDate", registrationDate)
         );
     }
 }

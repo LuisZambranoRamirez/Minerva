@@ -75,7 +75,7 @@ public class InventoryLoss extends Entity<InventoryLossId> {
                 new NumericAttribute(quantity),
                 new StringAttribute(reason),
                 new StringAttribute(observation),
-                new StringAttribute("registration_date", registrationDate)
+                new StringAttribute("registrationDate", registrationDate)
         );
     }
 }

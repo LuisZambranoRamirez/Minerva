@@ -51,10 +51,10 @@ public class AuditEvent extends Entity<AuditEventId> {
             new StringAttribute(getId()),
             new StringAttribute(userId),
             new StringAttribute(permission),
-            new StringAttribute(auditable.getAuditSubjectId()),
-            new StringAttribute("subject_name", auditable.getAuditSubjectName()),
-            new StringAttribute("subject_data", auditable.getAuditData().toString()),
-            new StringAttribute("registration_date", registrationDate)
+            new StringAttribute("subjectId", auditable.getAuditSubjectId()),
+            new StringAttribute("subjectName", auditable.getAuditSubjectName()),
+            new StringAttribute("subjectData", auditable.getAuditData().toString()),
+            new StringAttribute("registrationDate", registrationDate)
         );
     }
 }
