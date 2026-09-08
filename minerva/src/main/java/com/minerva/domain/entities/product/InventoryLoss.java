@@ -72,7 +72,7 @@ public class InventoryLoss extends Entity<InventoryLossId> {
         return Set.of(
                 new StringAttribute(getId()),
                 new StringAttribute(productId),
-                new NumericAttribute(quantity),
+                new NumericAttribute("quantity", quantity),
                 new StringAttribute(reason),
                 new StringAttribute(observation),
                 new StringAttribute("registrationDate", registrationDate)

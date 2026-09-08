@@ -23,10 +23,6 @@ public final class StringAttribute extends Attribute<String> {
         super(id.getIdName(), id.getIdValueAsString());
     }
 
-    public StringAttribute(String name, Id<?> id) {
-        super(name, id.getIdValueAsString());
-    }
-
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public StringAttribute(String name, LocalDateTime attributeValue) {

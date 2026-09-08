@@ -63,7 +63,7 @@ class Pay extends Entity<PayId> {
     public Set<Attribute<?>> getAuditData() {
         return Set.of(
                 new StringAttribute(getId()),
-                new NumericAttribute(amount),
+                new NumericAttribute("amount", amount),
                 new StringAttribute(paymentMethod),
                 new StringAttribute("registrationDate", registrationDate)
         );

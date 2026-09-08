@@ -2,5 +2,7 @@ package com.minerva.domain.entities.supplier;
 
 import com.minerva.domain.valueObject.id.Id;
 
-public interface SupplierId extends Id<String> {
+import java.util.UUID;
+
+public interface SupplierId extends Id<UUID> {
 }

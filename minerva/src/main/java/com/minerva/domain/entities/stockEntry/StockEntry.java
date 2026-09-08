@@ -1,28 +1,24 @@
 package com.minerva.domain.entities.stockEntry;
 
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.product.ProductId;
 import com.minerva.domain.entities.product.StockEntryProduct;
 import com.minerva.domain.entities.supplier.SupplierId;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.exceptions.EntityRestoreException;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.valueObject.id.ProductIdImpl;
-import com.minerva.domain.valueObject.id.SupplierName;
 import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.id.StockEntryIdImpl;
+import com.minerva.domain.valueObject.id.SupplierIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class StockEntry extends Entity<StockEntryId> implements StockEntryProduct {
 
@@ -37,14 +33,14 @@ public class StockEntry extends Entity<StockEntryId> implements StockEntryProduc
 
     public StockEntry(
             UUID productId,
-            String supplierName,
+            UUID supplierId,
             BigDecimal unitPrice,
             BigDecimal quantity,
             LocalDateTime expirationDate
     ) throws DomainException {        
 
         this.productId = new ProductIdImpl(productId);
-        this.supplierId = new SupplierName(supplierName);
+        this.supplierId = new SupplierIdImpl(supplierId);
         this.unitPrice = new Money(unitPrice);
         this.quantity = new ProductQuantity(quantity);
         this.expirationDate = expirationDate;
@@ -61,7 +57,7 @@ public class StockEntry extends Entity<StockEntryId> implements StockEntryProduc
     public StockEntry(
             UUID stockEntryId,
             UUID productId,
-            String supplierName,
+            UUID supplierId,
             BigDecimal unitPrice,
             BigDecimal quantity,
             LocalDateTime expirationDate,
@@ -71,7 +67,7 @@ public class StockEntry extends Entity<StockEntryId> implements StockEntryProduc
         try {
             tempId = new StockEntryIdImpl(stockEntryId);
             this.productId = new ProductIdImpl(productId);
-            this.supplierId = new SupplierName(supplierName);
+            this.supplierId = new SupplierIdImpl(supplierId);
             this.unitPrice = new Money(unitPrice);
             this.quantity = new ProductQuantity(quantity);
             this.expirationDate = expirationDate;
@@ -109,44 +105,15 @@ public class StockEntry extends Entity<StockEntryId> implements StockEntryProduc
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "stockEntryId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new StringAttribute(productId),
+                new StringAttribute(supplierId),
+                new NumericAttribute("unitPrice", unitPrice),
+                new NumericAttribute("quantity", quantity),
+                new StringAttribute("expiration_date", expirationDate),
+                new StringAttribute("registration_date", registrationDate)
         );
-
-        attributes.put(
-                "productId",
-                new DefaultStringAttribute(productId.asString())
-        );
-
-        attributes.put(
-                "supplierId",
-                new DefaultStringAttribute(supplierId.asString())
-        );
-
-        attributes.put(
-                "unitPrice",
-                unitPrice
-        );
-
-        attributes.put(
-                "quantity",
-                quantity
-        );
-
-        attributes.put(
-                "expirationDate",
-                new DefaultDateTimeAttribute(expirationDate)
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }
