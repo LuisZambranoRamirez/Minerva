@@ -1,6 +1,5 @@
 package com.minerva.domain.entities.auditEvent;
 
-import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.valueObject.ValueObject;
 import com.minerva.domain.valueObject.id.Id;
 

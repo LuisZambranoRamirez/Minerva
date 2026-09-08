@@ -1,9 +1,9 @@
 package com.minerva.domain.entities.product;
 
 import com.minerva.domain.constants.InventoryLossReason;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.exceptions.MinimumAmountException;
 import com.minerva.domain.exceptions.NullValueException;
@@ -13,9 +13,8 @@ import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.id.InventoryLossIdImpl;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class InventoryLoss extends Entity<InventoryLossId> {
 
@@ -69,39 +68,14 @@ public class InventoryLoss extends Entity<InventoryLossId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "inventoryLossId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new StringAttribute(productId),
+                new NumericAttribute(quantity),
+                new StringAttribute(reason),
+                new StringAttribute(observation),
+                new StringAttribute("registration_date", registrationDate)
         );
-
-        attributes.put(
-                "productId",
-                new DefaultStringAttribute(productId.asString())
-        );
-
-        attributes.put(
-                "quantity",
-                quantity
-        );
-
-        attributes.put(
-                "reason",
-                reason
-        );
-
-        attributes.put(
-                "observation",
-                observation
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }

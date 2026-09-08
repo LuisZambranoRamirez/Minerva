@@ -3,10 +3,9 @@ package com.minerva.domain.entities.product;
 import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.GainStrategy;
 import com.minerva.domain.constants.SaleType;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultNumericAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.entities.sale.ProductSale;
@@ -16,13 +15,9 @@ import com.minerva.domain.valueObject.id.ProductIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static com.minerva.domain.services.Math.isDecimal;
-import static com.minerva.domain.services.Math.isZeroOrLess;
 
 public class Product extends Entity<ProductId> implements ProductSale {
     private final ProductName productName;
@@ -236,69 +231,21 @@ public class Product extends Entity<ProductId> implements ProductSale {
 
     // falta el sku
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "productId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                // new StringAttribute(getSKU),
+                new StringAttribute(productName),
+                new NumericAttribute("stock", stock),
+                new StringAttribute(getGainStrategy()),
+                new NumericAttribute("gain_amount", getGainAmount()),
+                new NumericAttribute("reorder_level", reorderLevel),
+                new StringAttribute(barCode),
+                new StringAttribute(saleType),
+                new NumericAttribute("cost", cost),
+                new NumericAttribute("price", calculatePrice()),
+                new StringAttribute(productCategory),
+                new StringAttribute("registration_date", registrationDate)
         );
-
-        attributes.put(
-                "productName",
-                productName
-        );
-
-        attributes.put(
-                "stock",
-                stock
-        );
-
-        attributes.put(
-                "gainStrategy",
-                getGainStrategy()
-        );
-
-        attributes.put(
-                "gainAmount",
-                new DefaultNumericAttribute(getGainAmount())
-        );
-
-        attributes.put(
-                "reorderLevel",
-                reorderLevel
-        );
-
-        attributes.put(
-                "barCode",
-                barCode
-        );
-
-        attributes.put(
-                "saleType",
-                saleType
-        );
-        // NO esta en el esquema de la db
-        attributes.put(
-                "cost",
-                cost
-        );
-
-        attributes.put(
-                "price",
-                calculatePrice()
-        );
-        // ----------------
-        attributes.put(
-                "productCategory",
-                productCategory
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }
