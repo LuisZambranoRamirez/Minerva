@@ -1,15 +1,14 @@
 package com.minerva.domain.valueObject.id;
 
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.user.UserId;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.ValueObject;
-import com.minerva.domain.entities.userAction.StringAttribute;
 
-import java.util.Map;
+import java.util.Set;
 
-public final class UserName extends ValueObject<String> implements UserId, StringAttribute {
+public final class UserName extends ValueObject<String> implements UserId {
 
     private static final int MIN_LENGTH = 3;
     private static final int MAX_LENGTH = 30;
@@ -28,17 +27,29 @@ public final class UserName extends ValueObject<String> implements UserId, Strin
     }
 
     @Override
-    public String getAttribute() {
+    public String getIdValueAsString() {
         return getValue();
     }
 
     @Override
-    public String asString() {
-        return getValue();
+    public String getIdName() {
+        return "userId";
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        return Map.of("UserId", new DefaultStringAttribute(asString()));
+    public String getAuditSubjectName() {
+        return "userId";
+    }
+
+    @Override
+    public Id<?> getAuditSubjectId() {
+        return this;
+    }
+
+    @Override
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getAuditSubjectId())
+        );
     }
 }

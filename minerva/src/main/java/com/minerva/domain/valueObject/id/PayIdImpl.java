@@ -1,16 +1,16 @@
 package com.minerva.domain.valueObject.id;
 
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.sale.PayId;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.valueObject.ValueObject;
 
-public class PayIdImpl extends ValueObject<UUID> implements PayId {
+public final class PayIdImpl extends ValueObject<UUID> implements PayId {
 
     public PayIdImpl(UUID value) throws NullValueException {
         super(value);
@@ -20,7 +20,10 @@ public class PayIdImpl extends ValueObject<UUID> implements PayId {
         try {
             return new PayIdImpl(UUID.randomUUID());
         } catch (NullValueException e) {
-            throw new UnexpectedDomainException("Error al generar el ID de pago: " + e.getMessage(), e);
+            throw new UnexpectedDomainException(
+                    "Error al generar el ID de pago: " + e.getMessage(),
+                    e
+            );
         }
     }
 
@@ -30,12 +33,29 @@ public class PayIdImpl extends ValueObject<UUID> implements PayId {
     }
 
     @Override
-    public String asString() {
+    public String getIdValueAsString() {
         return getValue().toString();
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        return Map.of("PayId", new DefaultStringAttribute(asString()));
+    public String getIdName() {
+        return "payId";
+    }
+
+    @Override
+    public String getAuditSubjectName() {
+        return "payId";
+    }
+
+    @Override
+    public Id<?> getAuditSubjectId() {
+        return this;
+    }
+
+    @Override
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getAuditSubjectId())
+        );
     }
 }

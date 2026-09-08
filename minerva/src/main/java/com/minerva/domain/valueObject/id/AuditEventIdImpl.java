@@ -3,25 +3,25 @@ package com.minerva.domain.valueObject.id;
 import java.util.Set;
 import java.util.UUID;
 
-import com.minerva.domain.entities.auditEvent.StringAttribute;
-import com.minerva.domain.entities.sale.SaleDetailId;
 import com.minerva.domain.entities.auditEvent.Attribute;
-import com.minerva.domain.valueObject.ValueObject;
+import com.minerva.domain.entities.auditEvent.AuditEventId;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
+import com.minerva.domain.valueObject.ValueObject;
 
-public final class SaleDetailIdImpl extends ValueObject<UUID> implements SaleDetailId {
+public final class AuditEventIdImpl extends ValueObject<UUID> implements AuditEventId {
 
-    public SaleDetailIdImpl(UUID value) throws NullValueException {
+    private AuditEventIdImpl(UUID value) throws NullValueException {
         super(value);
     }
 
-    public static SaleDetailIdImpl generate() {
+    public static AuditEventIdImpl generate() {
         try {
-            return new SaleDetailIdImpl(UUID.randomUUID());
+            return new AuditEventIdImpl(UUID.randomUUID());
         } catch (NullValueException e) {
             throw new UnexpectedDomainException(
-                    "Error al generar el ID de detalle de venta: " + e.getMessage(),
+                    "Error al generar el ID de acción de usuario: " + e.getMessage(),
                     e
             );
         }
@@ -39,12 +39,12 @@ public final class SaleDetailIdImpl extends ValueObject<UUID> implements SaleDet
 
     @Override
     public String getIdName() {
-        return "saleDetailId";
+        return "auditEventId";
     }
 
     @Override
     public String getAuditSubjectName() {
-        return "saleDetailId";
+        return "auditEventId";
     }
 
     @Override

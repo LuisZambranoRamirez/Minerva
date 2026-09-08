@@ -1,18 +1,17 @@
 package com.minerva.domain.valueObject.id;
 
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.product.ProductId;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.ValueObject;
 
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
-public class ProductIdImpl extends ValueObject<UUID>  implements ProductId {
+public final class ProductIdImpl extends ValueObject<UUID> implements ProductId {
 
-    // Seguir este ejemplo para todos
     public ProductIdImpl(UUID value) throws NullValueException {
         if (value == null) throw new NullValueException("El productId no puede ser nulo");
         super(value);
@@ -22,7 +21,10 @@ public class ProductIdImpl extends ValueObject<UUID>  implements ProductId {
         try {
             return new ProductIdImpl(UUID.randomUUID());
         } catch (NullValueException e) {
-            throw new UnexpectedDomainException("Error al generar el ID de product: " + e.getMessage(), e);
+            throw new UnexpectedDomainException(
+                    "Error al generar el ID de product: " + e.getMessage(),
+                    e
+            );
         }
     }
 
@@ -32,12 +34,29 @@ public class ProductIdImpl extends ValueObject<UUID>  implements ProductId {
     }
 
     @Override
-    public String asString() {
+    public String getIdValueAsString() {
         return getValue().toString();
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        return Map.of("ProductId", new DefaultStringAttribute(asString()));
+    public String getIdName() {
+        return "productId";
+    }
+
+    @Override
+    public String getAuditSubjectName() {
+        return "productId";
+    }
+
+    @Override
+    public Id<?> getAuditSubjectId() {
+        return this;
+    }
+
+    @Override
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getAuditSubjectId())
+        );
     }
 }

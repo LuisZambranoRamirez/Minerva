@@ -1,8 +1,9 @@
 package com.minerva.domain.valueObject.id;
 
-import com.minerva.domain.entities.userAction.Auditable;
+import com.minerva.domain.entities.auditEvent.Auditable;
 
 public interface Id<I> extends Auditable {
     I getIdValue();
-    String asString();
+    String getIdValueAsString();
+    String getIdName();
 }
