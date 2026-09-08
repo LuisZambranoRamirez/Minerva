@@ -1,13 +1,12 @@
 package com.minerva.domain.entities.user;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Set;
 
 import com.minerva.domain.constants.Role;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.BooleanAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.*;
 import com.minerva.domain.services.PasswordHasher;
 import com.minerva.domain.valueObject.*;
@@ -17,19 +16,17 @@ import com.minerva.domain.valueObject.id.UserName;
 
 public class User extends Entity<UserId> implements UserReader {
     private final DNI dni;
-    private FullName fullName;
     private final UserName username;
     private PasswordHash passwordHash;
     private Role role;
     private boolean isActive;
     private final LocalDateTime registrationDate;
 
-    public User(PasswordHasher passwordHasher, String dni, String fullName, String username, String password, Role role) throws DomainException {
+    public User(PasswordHasher passwordHasher, String dni, String username, String password, Role role) throws DomainException {
         if (role == null) throw new NullValueException("El ROL no puede ser nulo.");
         UserName tempUserName = new UserName(username);
         super(tempUserName);
         this.dni = new DNI(dni);
-        this.fullName = new FullName(fullName);
         this.username = tempUserName;
         this.passwordHash = passwordHasher.hash(new Password(password));
         this.role = role;
@@ -37,13 +34,12 @@ public class User extends Entity<UserId> implements UserReader {
         this.registrationDate = LocalDateTime.now();
     }
 
-    public User(String dni, String fullName, String username, String password, Role role, boolean isActive, LocalDateTime registrationDate) {
+    public User(String dni, String username, String password, Role role, boolean isActive, LocalDateTime registrationDate) {
         UserName tempUserName;
         try {
             tempUserName = new UserName(username);
             this.dni = new DNI(dni);
             this.username = tempUserName;
-            this.fullName = new FullName(fullName);
             this.passwordHash = new PasswordHash(password);
             this.role = role;
             this.isActive = isActive;
@@ -62,11 +58,6 @@ public class User extends Entity<UserId> implements UserReader {
     @Override
     public DNI getDni() {
         return dni;
-    }
-
-    @Override
-    public FullName getFullName() {
-        return fullName;
     }
 
     @Override
@@ -90,49 +81,14 @@ public class User extends Entity<UserId> implements UserReader {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "userId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new StringAttribute(dni),
+                new StringAttribute(username),
+                new StringAttribute(role),
+                new BooleanAttribute("isActive", isActive),
+                new StringAttribute("registrationDate", registrationDate)
         );
-
-        attributes.put(
-                "dni",
-                dni
-        );
-
-        attributes.put(
-                "fullName",
-                fullName
-        );
-
-        attributes.put(
-                "username",
-                username
-        );
-
-        attributes.put(
-                "passwordHash",
-                passwordHash
-        );
-
-        attributes.put(
-                "role",
-                role
-        );
-
-        attributes.put(
-                "isActive",
-                new DefaultStringAttribute(String.valueOf(isActive))
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }
