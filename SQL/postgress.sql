@@ -29,7 +29,7 @@ CREATE TYPE product_category AS ENUM (
     'OTROS'
 );
 
-CREATE TYPE inventory_loss_reason AS ENUM (
+CREATE TYPE stock_loss_reason AS ENUM (
     'DAÑADO',
     'VENCIMIENTO',
     'PERDIDO',
@@ -192,9 +192,15 @@ CREATE TABLE customer (
     customer_id UUID PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL UNIQUE,
     phone_number CHAR(9) UNIQUE,
-    registration_date TIMESTAMP NOT NULL
-);
+    registered_by_seller_dni CHAR(8) NOT NULL,
+    registration_date TIMESTAMP NOT NULL,
 
+    CONSTRAINT fk_customer_seller
+        FOREIGN KEY (registered_by_seller_dni)
+        REFERENCES seller(dni)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
 CREATE TABLE product (
     product_id UUID PRIMARY KEY,
     sku VARCHAR(100) NOT NULL UNIQUE,
@@ -234,6 +240,7 @@ CREATE TABLE stock_entry (
     stock_entry_id UUID PRIMARY KEY,
     id_product UUID NOT NULL,
     id_supplier UUID NOT NULL,
+    warehouse_keeper_dni CHAR(8) NOT NULL,
     unit_price NUMERIC(10,2) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
     expiration_date TIMESTAMP,
@@ -249,17 +256,30 @@ CREATE TABLE stock_entry (
         FOREIGN KEY (id_supplier)
         REFERENCES supplier(supplier_id)
         ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_stock_entry_warehouse_keeper
+        FOREIGN KEY (warehouse_keeper_dni)
+        REFERENCES warehouse_keeper(dni)
+        ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
 
 CREATE TABLE sale (
     sale_id UUID PRIMARY KEY,
-    customer_id UUID NOT NULL,
+    id_customer UUID NOT NULL,
+    registered_by_seller_dni CHAR(8) NOT NULL,
     registration_date TIMESTAMP NOT NULL,
 
     CONSTRAINT fk_sale_customer
-        FOREIGN KEY (customer_id)
+        FOREIGN KEY (id_customer)
         REFERENCES customer(customer_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_sale_seller
+        FOREIGN KEY (registered_by_seller_dni)
+        REFERENCES seller(dni)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -284,17 +304,25 @@ CREATE TABLE sale_detail (
         ON UPDATE CASCADE
 );
 
-CREATE TABLE inventory_loss (
-    inventory_loss_id UUID PRIMARY KEY,
+
+CREATE TABLE stock_loss (
+    stock_loss_id UUID PRIMARY KEY,
     id_product UUID NOT NULL,
+    warehouse_keeper_dni CHAR(8) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
-    reason inventory_loss_reason NOT NULL,
+    reason stock_loss_reason NOT NULL,
     observation VARCHAR(255),
     registration_date TIMESTAMP NOT NULL,
 
-    CONSTRAINT fk_inventory_loss_product
+    CONSTRAINT fk_stock_loss_product
         FOREIGN KEY (id_product)
         REFERENCES product(product_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_stock_loss_warehouse_keeper
+        FOREIGN KEY (warehouse_keeper_dni)
+        REFERENCES warehouse_keeper(dni)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -302,6 +330,7 @@ CREATE TABLE inventory_loss (
 CREATE TABLE pay (
     pay_id UUID PRIMARY KEY,
     id_sale UUID NOT NULL,
+    registered_by_seller_dni CHAR(8) NOT NULL,
     amount NUMERIC(10,2) NOT NULL,
     payment_method payment_method NOT NULL,
     registration_date TIMESTAMP NOT NULL,
@@ -310,12 +339,19 @@ CREATE TABLE pay (
         FOREIGN KEY (id_sale)
         REFERENCES sale(sale_id)
         ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_pay_seller
+        FOREIGN KEY (registered_by_seller_dni)
+        REFERENCES seller(dni)
+        ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
 
 CREATE TABLE product_return (
     product_return_id UUID PRIMARY KEY,
     id_sale_detail UUID NOT NULL,
+    registered_by_seller_dni CHAR(8) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
     reason return_reason NOT NULL,
     registration_date TIMESTAMP NOT NULL,
@@ -323,6 +359,12 @@ CREATE TABLE product_return (
     CONSTRAINT fk_product_return_sale_detail
         FOREIGN KEY (id_sale_detail)
         REFERENCES sale_detail(sale_detail_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_product_return_seller
+        FOREIGN KEY (registered_by_seller_dni)
+        REFERENCES seller(dni)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
