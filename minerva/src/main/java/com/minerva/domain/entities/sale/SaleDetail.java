@@ -1,7 +1,8 @@
 package com.minerva.domain.entities.sale;
 
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.exceptions.EntityRestoreException;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
@@ -12,8 +13,7 @@ import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.valueObject.id.SaleDetailIdImpl;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 class SaleDetail extends Entity<SaleDetailId> {
@@ -62,24 +62,11 @@ class SaleDetail extends Entity<SaleDetailId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "saleDetailId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new NumericAttribute("quantity", quantity),
+                new NumericAttribute("unitPrice", unitPrice)
         );
-
-        attributes.put(
-                "quantity",
-                quantity
-        );
-
-        attributes.put(
-                "unitPrice",
-                unitPrice
-        );
-
-        return attributes;
     }
 }

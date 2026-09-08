@@ -5,7 +5,7 @@ import com.minerva.domain.exceptions.UnexpectedDomainException;
 import java.util.Objects;
 import java.util.Optional;
 
-public sealed abstract class Attribute<A> permits BooleanAttribute, NumericAttribute, StringAttribute {
+public sealed abstract class Attribute<A> permits BooleanAttribute, NumericAttribute, ArrayAttribute, StringAttribute {
     private final String name;
     private final A attributeValue;
 

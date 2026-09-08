@@ -1,8 +1,11 @@
 package com.minerva.domain.entities.sale;
 
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.ArrayAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.customer.CustomerId;
 import com.minerva.domain.entities.product.SaleProduct;
-import com.minerva.domain.entities.userAction.Attribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.exceptions.*;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
@@ -10,7 +13,7 @@ import com.minerva.domain.entities.product.ProductId;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.constants.PaymentMethod;
-import com.minerva.domain.valueObject.id.CustomerName;
+import com.minerva.domain.valueObject.id.CustomerIdImpl;
 import com.minerva.domain.valueObject.id.SaleIdImpl;
 
 import java.math.BigDecimal;
@@ -24,14 +27,14 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     private final List<Pay> pays =  new LinkedList<>();
     private final Map<ProductId, SaleDetail> saleDetails = new HashMap<>();
 
-    public Sale(String customerNameId, List<SaleItemWriteDTO> items) throws DomainException {
+    public Sale(UUID customerId, List<SaleItemWriteDTO> items) throws DomainException {
         super(SaleIdImpl.generate());
-        this.customerId = new CustomerName(customerNameId);
+        this.customerId = new CustomerIdImpl(customerId);
         this.addSaleItem(items);
         this.registrationDate = LocalDateTime.now();
     }
 
-    public Sale(UUID saleId, String customerId, LocalDateTime registrationDate, List<SaleItemReadDTO> saleItemReadDTOS, List<PayReadDTO> payReadDTOList) {
+    public Sale(UUID saleId, UUID customerId, LocalDateTime registrationDate, List<SaleItemReadDTO> saleItemReadDTOS, List<PayReadDTO> payReadDTOList) {
         SaleId saleIdValue;
 
         try {
@@ -43,7 +46,7 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
             if (payReadDTOList.stream().anyMatch(Objects::isNull)) throw new InvalidDomainArgumentException("La lista de pagos no puede contener elementos nulos");
 
             saleIdValue = new SaleIdImpl(saleId);
-            this.customerId = new CustomerName(customerId);
+            this.customerId = new CustomerIdImpl(customerId);
             this.registrationDate = registrationDate;
         } catch (InvalidDomainArgumentException e) {
             throw new EntityRestoreException(e.getMessage(), e);
@@ -72,8 +75,32 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        return Map.of();
+    public Set<Attribute<?>> getAuditData() {
+        Set<Attribute<?>> attributes = new HashSet<>();
+
+        attributes.add(new StringAttribute(getId()));
+        attributes.add(new StringAttribute(customerId));
+        attributes.add(new NumericAttribute("total", calculateTotal()));
+        attributes.add(new NumericAttribute("totalPaid", calculateTotalPaid()));
+        attributes.add(new NumericAttribute("amountDue", calculateAmountDue()));
+        attributes.add(new StringAttribute("registration_date", registrationDate));
+
+        List<Set<Attribute<?>>> saleDetails = this.saleDetails
+                .values()
+                .stream()
+                .map(SaleDetail::getAuditData)
+                .toList();
+
+        attributes.add(new ArrayAttribute("saleDetails", saleDetails));
+
+        List<Set<Attribute<?>>> pays = this.pays
+                .stream()
+                .map(Pay::getAuditData)
+                .toList();
+
+        attributes.add(new ArrayAttribute("pays", pays));
+
+        return attributes;
     }
 
     @Override

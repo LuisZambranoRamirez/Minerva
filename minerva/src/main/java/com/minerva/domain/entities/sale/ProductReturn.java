@@ -1,9 +1,9 @@
 package com.minerva.domain.entities.sale;
 
 import com.minerva.domain.constants.ProductReturnReason;
-import com.minerva.domain.entities.userAction.Attribute;
-import com.minerva.domain.entities.userAction.DefaultDateTimeAttribute;
-import com.minerva.domain.entities.userAction.DefaultStringAttribute;
+import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.entities.auditEvent.NumericAttribute;
+import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.exceptions.MinimumAmountException;
@@ -12,8 +12,7 @@ import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.id.ProductReturnIdImpl;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Set;
 
 // Falta el id de la venta, pero creo que lo voya a cotnrolar desde la entidad sale
 class ProductReturn extends Entity<ProductReturnId> {
@@ -45,29 +44,12 @@ class ProductReturn extends Entity<ProductReturnId> {
     }
 
     @Override
-    public Map<String, Attribute<?>> extractAuditData() {
-        Map<String, Attribute<?>> attributes = new HashMap<>();
-
-        attributes.put(
-                "productReturnId",
-                new DefaultStringAttribute(getId().asString())
+    public Set<Attribute<?>> getAuditData() {
+        return Set.of(
+                new StringAttribute(getId()),
+                new NumericAttribute("quantity", quantity),
+                new StringAttribute(reason),
+                new StringAttribute("registration_date", registrationDate)
         );
-
-        attributes.put(
-                "quantity",
-                quantity
-        );
-
-        attributes.put(
-                "reason",
-                reason
-        );
-
-        attributes.put(
-                "registrationDate",
-                new DefaultDateTimeAttribute(registrationDate)
-        );
-
-        return attributes;
     }
 }
