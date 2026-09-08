@@ -1,9 +1,8 @@
 package com.minerva.domain.valueObject;
 
-import com.minerva.domain.entities.userAction.StringAttribute;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 
-public class ProductName extends ValueObject<String> implements StringAttribute {
+public class ProductName extends ValueObject<String> {
     private static final int MIN_LENGTH = 3;
     private static final int MAX_LENGTH = 100;
 
@@ -15,10 +14,4 @@ public class ProductName extends ValueObject<String> implements StringAttribute 
         if (value.length() > MAX_LENGTH) throw new InvalidDomainArgumentException("El nombre del producto no puede tener más de " + MAX_LENGTH + " caracteres.");
         if (!value.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9 ]+$")) throw new InvalidDomainArgumentException("El nombre del producto solo puede contener letras y números.");
     }
-
-    @Override
-    public String getAttribute() {
-        return getValue();
-    }
-
 }

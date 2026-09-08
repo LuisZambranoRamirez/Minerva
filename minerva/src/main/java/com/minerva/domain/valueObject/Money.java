@@ -3,12 +3,11 @@ package com.minerva.domain.valueObject;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.exceptions.MinimumAmountException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
-import com.minerva.domain.entities.userAction.NumericAttribute;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-public final class Money extends ValueObject<BigDecimal> implements NumericAttribute {
+public final class Money extends ValueObject<BigDecimal> {
     public static final BigDecimal MIN_AMOUNT = BigDecimal.ZERO;
     public static final int MAX_DECIMALS = 2;
 
@@ -119,11 +118,6 @@ public final class Money extends ValueObject<BigDecimal> implements NumericAttri
             // Si esto truena, récenle al de arriba
             throw new UnexpectedDomainException("Error al crear el monto mínimo.", e);
         }
-    }
-
-    @Override
-    public BigDecimal getAttribute() {
-        return getValue();
     }
 }
 

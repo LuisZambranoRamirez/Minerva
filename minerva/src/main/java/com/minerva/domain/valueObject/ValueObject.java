@@ -16,6 +16,10 @@ public abstract class ValueObject<V> {
         return value;
     }
 
+    public String getClassName() {
+        return getClass().getSimpleName();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

@@ -1,9 +1,8 @@
 package com.minerva.domain.valueObject;
 
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
-import com.minerva.domain.entities.userAction.StringAttribute;
 
-public final class Password extends ValueObject<String> implements StringAttribute {
+public final class Password extends ValueObject<String> {
 
     private static final int MIN_LENGTH = 8;
     private static final int MAX_LENGTH = 100;
@@ -15,10 +14,4 @@ public final class Password extends ValueObject<String> implements StringAttribu
         if (value.length() < MIN_LENGTH) throw new InvalidDomainArgumentException("El PASSWORD debe tener al menos " + MIN_LENGTH + " caracteres.");
         if (value.length() > MAX_LENGTH)throw new InvalidDomainArgumentException("El PASSWORD no puede exceder los " + MAX_LENGTH + " caracteres.");
     }
-
-    @Override
-    public String getAttribute() {
-        return getValue();
-    }
-
 }
