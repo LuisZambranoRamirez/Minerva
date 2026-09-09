@@ -1,6 +1,13 @@
 -- ==========================
 -- ENUMS
 -- ==========================
+CREATE TYPE audit_event_type AS ENUM (
+    'CREATE',
+    'READ',
+    'UPDATE',
+    'DELETE'
+);
+
 CREATE TYPE modifier AS ENUM (
     'FRIO'
 );
@@ -116,6 +123,7 @@ CREATE TABLE personal (
     names VARCHAR(100) NOT NULL,
     lastnames VARCHAR(100) NOT NULL,
     phone_number CHAR(9) NOT NULL UNIQUE,
+    role_name role NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL,
     registration_date TIMESTAMP NOT NULL
@@ -124,8 +132,7 @@ CREATE TABLE personal (
 CREATE TABLE app_user (
     user_name VARCHAR(30) PRIMARY KEY,
     dni CHAR(8) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role_name role NOT NULL,
+    password VARCHAR(60) NOT NULL,
     is_active BOOLEAN NOT NULL,
     registration_date TIMESTAMP NOT NULL,
 
@@ -136,37 +143,10 @@ CREATE TABLE app_user (
         ON UPDATE CASCADE
 );
 
--- ==========================
--- VENDEDOR
--- ==========================
-
-CREATE TABLE seller (
-    dni CHAR(8) PRIMARY KEY,
-
-    CONSTRAINT fk_seller_personal
-        FOREIGN KEY (dni)
-        REFERENCES personal(dni)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
-
--- ==========================
--- ALMACENISTA
--- ==========================
-
-CREATE TABLE warehouse_keeper (
-    dni CHAR(8) PRIMARY KEY,
-
-    CONSTRAINT fk_warehouse_keeper_personal
-        FOREIGN KEY (dni)
-        REFERENCES personal(dni)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
-
 CREATE TABLE audit_event (
     audit_event_id UUID PRIMARY KEY,
     user_name VARCHAR(30) NOT NULL,
+    event_type audit_event_type NOT NULL,
     permission permission NOT NULL,
     subject_id TEXT NOT NULL,
     subject_name TEXT NOT NULL,
@@ -180,6 +160,18 @@ CREATE TABLE audit_event (
         ON UPDATE CASCADE
 );
 
+CREATE INDEX idx_audit_event_user_event_type
+    ON audit_event (user_name, event_type);
+
+CREATE INDEX idx_audit_event_user_permission
+    ON audit_event (user_name, permission);
+
+CREATE INDEX idx_audit_event_user_subject_id
+    ON audit_event (user_name, subject_id);
+
+CREATE INDEX idx_audit_event_user_subject_name
+    ON audit_event (user_name, subject_name);
+
 CREATE TABLE supplier (
     supplier_id UUID PRIMARY KEY,
     supplier_name VARCHAR(100) NOT NULL UNIQUE,
@@ -192,15 +184,9 @@ CREATE TABLE customer (
     customer_id UUID PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL UNIQUE,
     phone_number CHAR(9) UNIQUE,
-    registered_by_seller_dni CHAR(8) NOT NULL,
-    registration_date TIMESTAMP NOT NULL,
-
-    CONSTRAINT fk_customer_seller
-        FOREIGN KEY (registered_by_seller_dni)
-        REFERENCES seller(dni)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE
+    registration_date TIMESTAMP NOT NULL
 );
+
 CREATE TABLE product (
     product_id UUID PRIMARY KEY,
     sku VARCHAR(100) NOT NULL UNIQUE,
@@ -208,6 +194,7 @@ CREATE TABLE product (
     gain_strategy gain_strategy NOT NULL,
     gain_amount NUMERIC(10,2) NOT NULL,
     stock NUMERIC(10,3) NOT NULL,
+    cost NUMERIC(10,2) NOT NULL,
     reorder_level NUMERIC(10,3),
     bar_code CHAR(13) UNIQUE,
     sale_type sale_type NOT NULL,
@@ -236,31 +223,35 @@ CREATE TABLE unit_to_bulk (
         ON UPDATE CASCADE
 );
 
+CREATE TABLE stock_receipt (
+    stock_receipt_id UUID PRIMARY KEY,
+    id_supplier UUID NOT NULL,
+    registration_date TIMESTAMP NOT NULL,
+
+    CONSTRAINT fk_stock_receipt_supplier
+        FOREIGN KEY (id_supplier)
+        REFERENCES supplier(supplier_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
 CREATE TABLE stock_entry (
     stock_entry_id UUID PRIMARY KEY,
+    id_stock_receipt UUID NOT NULL,
     id_product UUID NOT NULL,
-    id_supplier UUID NOT NULL,
-    warehouse_keeper_dni CHAR(8) NOT NULL,
     unit_price NUMERIC(10,2) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
     expiration_date TIMESTAMP,
-    registration_date TIMESTAMP NOT NULL,
+
+    CONSTRAINT fk_stock_entry_receipt
+        FOREIGN KEY (id_stock_receipt)
+        REFERENCES stock_receipt(stock_receipt_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
 
     CONSTRAINT fk_stock_entry_product
         FOREIGN KEY (id_product)
         REFERENCES product(product_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_stock_entry_supplier
-        FOREIGN KEY (id_supplier)
-        REFERENCES supplier(supplier_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_stock_entry_warehouse_keeper
-        FOREIGN KEY (warehouse_keeper_dni)
-        REFERENCES warehouse_keeper(dni)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -268,18 +259,11 @@ CREATE TABLE stock_entry (
 CREATE TABLE sale (
     sale_id UUID PRIMARY KEY,
     id_customer UUID NOT NULL,
-    registered_by_seller_dni CHAR(8) NOT NULL,
     registration_date TIMESTAMP NOT NULL,
 
     CONSTRAINT fk_sale_customer
         FOREIGN KEY (id_customer)
         REFERENCES customer(customer_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_sale_seller
-        FOREIGN KEY (registered_by_seller_dni)
-        REFERENCES seller(dni)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -308,7 +292,6 @@ CREATE TABLE sale_detail (
 CREATE TABLE stock_loss (
     stock_loss_id UUID PRIMARY KEY,
     id_product UUID NOT NULL,
-    warehouse_keeper_dni CHAR(8) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
     reason stock_loss_reason NOT NULL,
     observation VARCHAR(255),
@@ -318,19 +301,12 @@ CREATE TABLE stock_loss (
         FOREIGN KEY (id_product)
         REFERENCES product(product_id)
         ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_stock_loss_warehouse_keeper
-        FOREIGN KEY (warehouse_keeper_dni)
-        REFERENCES warehouse_keeper(dni)
-        ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
 
 CREATE TABLE pay (
     pay_id UUID PRIMARY KEY,
     id_sale UUID NOT NULL,
-    registered_by_seller_dni CHAR(8) NOT NULL,
     amount NUMERIC(10,2) NOT NULL,
     payment_method payment_method NOT NULL,
     registration_date TIMESTAMP NOT NULL,
@@ -339,19 +315,12 @@ CREATE TABLE pay (
         FOREIGN KEY (id_sale)
         REFERENCES sale(sale_id)
         ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_pay_seller
-        FOREIGN KEY (registered_by_seller_dni)
-        REFERENCES seller(dni)
-        ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
 
 CREATE TABLE product_return (
     product_return_id UUID PRIMARY KEY,
     id_sale_detail UUID NOT NULL,
-    registered_by_seller_dni CHAR(8) NOT NULL,
     quantity NUMERIC(10,3) NOT NULL,
     reason return_reason NOT NULL,
     registration_date TIMESTAMP NOT NULL,
@@ -359,12 +328,6 @@ CREATE TABLE product_return (
     CONSTRAINT fk_product_return_sale_detail
         FOREIGN KEY (id_sale_detail)
         REFERENCES sale_detail(sale_detail_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_product_return_seller
-        FOREIGN KEY (registered_by_seller_dni)
-        REFERENCES seller(dni)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -432,9 +395,7 @@ CREATE TABLE role_permission (
 CREATE TABLE user_permission (
     id_user VARCHAR(30) NOT NULL,
     id_permission permission NOT NULL,
-
     is_allowed BOOLEAN NOT NULL,
-
     registration_date TIMESTAMP NOT NULL,
 
     PRIMARY KEY (id_user, id_permission),
@@ -449,12 +410,35 @@ CREATE TABLE user_permission (
 -- DATOS INICIALES
 -- ==========================
 
-INSERT INTO supplier (supplier_id, supplier_name, registration_date)
-VALUES (gen_random_uuid(), 'anonimo', NOW());
+-- ==========================
+-- CLIENTE ANÓNIMO
+-- ==========================
 
-INSERT INTO customer (customer_id, full_name, registration_date)
-VALUES (gen_random_uuid(), 'anonimo', NOW());
+INSERT INTO customer (
+    customer_id,
+    full_name,
+    registration_date
+)
+VALUES (
+    gen_random_uuid(),
+    'anonimo',
+    NOW()
+);
 
+-- ==========================
+-- PROVEEDOR ANÓNIMO
+-- ==========================
+
+INSERT INTO supplier (
+    supplier_id,
+    supplier_name,
+    registration_date
+)
+VALUES (
+    gen_random_uuid(),
+    'anonimo',
+    NOW()
+);
 -- ==========================
 -- AUDITORIA 
 -- AJENO A LAS REGLAS DE NEGOCIO, EN CONSECUENCIA SE TOMARON MAS LIBERTADES CON RESPECTO AL TRATAMIENTO DE LOS DATOS
