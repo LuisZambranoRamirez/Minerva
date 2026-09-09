@@ -7,7 +7,7 @@ import com.minerva.domain.constants.Permission;
 import com.minerva.domain.constants.Role;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.entities.supplier.Supplier;
-import com.minerva.domain.valueObject.id.SupplierName;
+import com.minerva.domain.valueObject.SupplierName;
 import com.minerva.domain.valueObject.id.UserName;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.repositories.SupplierRepository;

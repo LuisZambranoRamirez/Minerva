@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.minerva.domain.constants.Category;
+import com.minerva.domain.constants.ProductCategory;
 
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
@@ -47,7 +47,7 @@ public class ProductController {
                 request.reorderLevel(),
                 request.barCode(),
                 request.saleType(),
-                request.category(),
+                request.productCategory(),
                 request.purchasedFromSupplierId(),
                 request.purchaseUnitPrice(),
                 request.purchaseQuantity(),
@@ -147,7 +147,7 @@ public class ProductController {
             @NotNull BigDecimal reorderLevel,
             String barCode,
             @NotNull SaleType saleType,
-            @NotNull Category category,
+            @NotNull ProductCategory productCategory,
             @NotBlank String purchasedFromSupplierId,
             @NotNull BigDecimal purchaseUnitPrice,
             @NotNull BigDecimal purchaseQuantity,

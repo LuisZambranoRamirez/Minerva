@@ -13,7 +13,6 @@ import com.minerva.domain.entities.sale.SaleId;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.minerva.domain.entities.sale.Sale;
 import com.minerva.domain.entities.sale.Sale.PayDTO;
 import com.minerva.domain.entities.sale.Sale.SaleDetailDTO;
 import com.minerva.domain.exceptions.DomainException;
@@ -49,7 +48,7 @@ public class SaleRepositoryAdapter implements SaleRepository {
 
     @Transactional
     @Override
-    public void save(Sale sale) {
+    public void save(com.minerva.domain.entities.sale.Sale sale) {
         saleRepository.save(toEntity(sale));
         saveSaleDetails(sale.getSaleDetails(), sale.getId());
         savePays(sale.getPays(), sale.getId());
@@ -57,43 +56,43 @@ public class SaleRepositoryAdapter implements SaleRepository {
 
     @Transactional
     public void saveSaleDetails(List<SaleDetailDTO> saleDetails, SaleId saleId) {
-        SaleEntity saleEntity = entityManager.getReference(SaleEntity.class, saleId.value());
+        SaleEntity sale = entityManager.getReference(SaleEntity.class, saleId.value());
 
         for (SaleDetailDTO saleDetailDTO : saleDetails) {
-            ProductEntity productEntity = entityManager.getReference(ProductEntity.class, saleDetailDTO.productId());
+            ProductEntity product = entityManager.getReference(ProductEntity.class, saleDetailDTO.productId());
             
-            SaleDetailEntity saleDetailEntity = new SaleDetailEntity(saleDetailDTO.saleDetailId(), saleEntity, productEntity, saleDetailDTO.quantity(), saleDetailDTO.unitPrice());
-            saleDetailRepository.save(saleDetailEntity);
+            SaleDetailEntity saleDetail = new SaleDetailEntity(saleDetailDTO.saleDetailId(), sale, product, saleDetailDTO.quantity(), saleDetailDTO.unitPrice());
+            saleDetailRepository.save(saleDetail);
         }        
     }
 
     @Transactional
     public void savePays(List<PayDTO> pays, SaleId saleId) {
-        SaleEntity saleEntity = entityManager.getReference(SaleEntity.class, saleId.value());
+        SaleEntity sale = entityManager.getReference(SaleEntity.class, saleId.value());
 
         for (PayDTO payDTO : pays) {
-            PayEntity payEntity = new PayEntity(payDTO.payId(), saleEntity, payDTO.amount(), payDTO.paymentMethod(), payDTO.registrationDate());
-            payRepository.save(payEntity);
+            PayEntity pay = new PayEntity(payDTO.payId(), sale, payDTO.amount(), payDTO.paymentMethod(), payDTO.registrationDate());
+            payRepository.save(pay);
         }        
     }
 
     public List<SaleDetailDTO> findSaleDetailBySaleId(SaleId saleId) {
-        return saleDetailRepository.findBySaleEntity_SaleId(saleId.asString())
+        return saleDetailRepository.findBySaleEntity_SaleId(saleId.getIdValueAsString())
                 .stream()
                 .map(this::toSaleDetailDTO)
                 .toList();
     }
 
     public List<PayDTO> findPayBySaleId(SaleId saleId) {
-        return payRepository.findBySaleEntity_SaleId(saleId.asString())
+        return payRepository.findBySaleEntity_SaleId(saleId.getIdValueAsString())
                 .stream()
                 .map(this::toPayDTO)
                 .toList();
     }
 
     @Override
-    public Optional<Sale> findById(SaleId saleId) {
-        Optional<SaleEntity> saleEntity = saleRepository.findById(saleId.asString());
+    public Optional<com.minerva.domain.entities.sale.Sale> findById(SaleId saleId) {
+        Optional<SaleEntity> saleEntity = saleRepository.findById(saleId.getIdValueAsString());
         if (saleEntity.isEmpty()) return Optional.empty();
 
         List<SaleDetailDTO> saleDetails = findSaleDetailBySaleId(saleId);
@@ -103,17 +102,17 @@ public class SaleRepositoryAdapter implements SaleRepository {
     }
 
     @Override
-    public List<Sale> findByCustomerId(CustomerId customerId) {
+    public List<com.minerva.domain.entities.sale.Sale> findByCustomerId(CustomerId customerId) {
         List<SaleEntity> saleEntities = saleRepository.findByCustomerEntity_CustomerNameId(customerId.value());
 
         return saleEntities.stream()
-        .map(saleEntity -> {
+        .map(sale -> {
             SaleIdImpl saleIdImpl;
 
             // OJAZOOO, esto hay que revisar porque no creo que el domain expecion deberia manejarse aqui y/o asi
             // aparte, tengo dudas sobre si deberia lanzar UnexpectedDomainException
             try {
-                saleIdImpl = SaleIdImpl.fromString(saleEntity.getSaleId());
+                saleIdImpl = SaleIdImpl.fromString(sale.getSaleId());
             } catch (DomainException e) {
                 throw new UnexpectedDomainException("Error al convertir el ID de venta: " + e.getMessage(), e);
             }
@@ -124,14 +123,14 @@ public class SaleRepositoryAdapter implements SaleRepository {
             List<PayDTO> pays =
                     findPayBySaleId(saleIdImpl);
 
-            return toDomain(saleEntity, saleDetails, pays);
+            return toDomain(sale, saleDetails, pays);
         })
         .toList();
     }
 
     @Override
-    public List<Sale> findAll() {     
-        List<Sale> sales;
+    public List<com.minerva.domain.entities.sale.Sale> findAll() {
+        List<com.minerva.domain.entities.sale.Sale> sales;
 
         List<SaleEntity> saleEntities = saleRepository.findAll();
         List<SaleDetailEntity> saleDetails = saleDetailRepository.findAll();
@@ -141,21 +140,21 @@ public class SaleRepositoryAdapter implements SaleRepository {
 
 
         Map<String, List<SaleDetailDTO>> detailsBySaleId = saleDetails.stream().collect(Collectors.groupingBy(
-                sd -> sd.getSaleEntity().getSaleId(),
+                sd -> sd.getSale().getSaleId(),
                 Collectors.mapping(this::toSaleDetailDTO, Collectors.toList())
             ));
 
         Map<String, List<PayDTO>> paysBySaleId = pays.stream().collect(Collectors.groupingBy(
-                p -> p.getSaleEntity().getSaleId(),
+                p -> p.getSale().getSaleId(),
                 Collectors.mapping(this::toPayDTO, Collectors.toList())
             ));
 
-        for (SaleEntity saleEntity : saleEntities) {
-            List<SaleDetailDTO> detailDTOs = detailsBySaleId.getOrDefault(saleEntity.getSaleId(), List.of());
+        for (SaleEntity sale : saleEntities) {
+            List<SaleDetailDTO> detailDTOs = detailsBySaleId.getOrDefault(sale.getSaleId(), List.of());
 
-            List<PayDTO> payDTOs = paysBySaleId.getOrDefault(saleEntity.getSaleId(), List.of());
+            List<PayDTO> payDTOs = paysBySaleId.getOrDefault(sale.getSaleId(), List.of());
 
-            sales.add(toDomain(saleEntity, detailDTOs, payDTOs));
+            sales.add(toDomain(sale, detailDTOs, payDTOs));
         }
 
         return sales;
@@ -164,7 +163,7 @@ public class SaleRepositoryAdapter implements SaleRepository {
 
     @Override
     public List<SaleDetailDTO> findSaleDetailsById(SaleDetailId id) {
-        return saleDetailRepository.findById(id.asString())
+        return saleDetailRepository.findById(id.getIdValueAsString())
                 .stream()
                 .map(this::toSaleDetailDTO)
                 .toList();
@@ -172,15 +171,15 @@ public class SaleRepositoryAdapter implements SaleRepository {
 
     @Override
     public List<PayDTO> findPaysById(PayId id) {
-        return payRepository.findById(id.asString())
+        return payRepository.findById(id.getIdValueAsString())
                 .stream()
                 .map(this::toPayDTO)
                 .toList();
     }    
  
 
-    private Sale toDomain(SaleEntity entity, List<SaleDetailDTO> saleDetailDTO, List<PayDTO> payDTO) {
-        return new Sale(
+    private com.minerva.domain.entities.sale.Sale toDomain(SaleEntity entity, List<SaleDetailDTO> saleDetailDTO, List<PayDTO> payDTO) {
+        return new com.minerva.domain.entities.sale.Sale(
                 entity.getSaleId(),
                 entity.getCustomerEntity().getCustomerNameId(),
                 entity.getRegistrationDate(),
@@ -189,12 +188,12 @@ public class SaleRepositoryAdapter implements SaleRepository {
         );
     }
 
-    private SaleEntity toEntity(Sale sale) {
+    private SaleEntity toEntity(com.minerva.domain.entities.sale.Sale sale) {
         CustomerEntity customerEntity = entityManager
         .getReference(CustomerEntity.class, sale.getCustomerId());
 
         return new SaleEntity(
-                sale.getId().asString(),
+                sale.getId().getIdValueAsString(),
                 customerEntity,
                 sale.getRegistrationDate()
         );
@@ -203,7 +202,7 @@ public class SaleRepositoryAdapter implements SaleRepository {
     private SaleDetailDTO toSaleDetailDTO(SaleDetailEntity entity) {
         return new SaleDetailDTO(
                 entity.getSaleDetailId(),
-                entity.getProductEntity().getProductNameId(),
+                entity.getProduct().getProductNameId(),
                 entity.getQuantity(),
                 entity.getUnitPrice()
         );

@@ -6,7 +6,6 @@ import java.util.Optional;
 import com.minerva.domain.entities.supplier.SupplierId;
 import com.minerva.domain.valueObject.PhoneNumber;
 import com.minerva.domain.valueObject.RUC;
-import com.minerva.domain.entities.supplier.Supplier;
 import com.minerva.domain.repositories.SupplierRepository;
 import com.minerva.infrastructure.persistence.entity.SupplierEntity;
 import com.minerva.infrastructure.persistence.repository.JpaSupplierRepository;
@@ -22,7 +21,7 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
     }
 
     @Override
-    public void save(Supplier supplier) {
+    public void save(com.minerva.domain.entities.supplier.Supplier supplier) {
         jpaSupplierRepository.save(toEntity(supplier));
     }
 
@@ -42,7 +41,7 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
     }
 
     @Override
-    public List<Supplier> findAll() {
+    public List<com.minerva.domain.entities.supplier.Supplier> findAll() {
         return jpaSupplierRepository.findAll()
                 .stream()
                 .map(this::toDomain)
@@ -50,25 +49,25 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
     }
 
     @Override
-    public Optional<Supplier> findById(SupplierId id) {
+    public Optional<com.minerva.domain.entities.supplier.Supplier> findById(SupplierId id) {
         return jpaSupplierRepository.findById(id.value())
                 .map(this::toDomain);
     }
     
 
     @Override
-    public Optional<Supplier> findByRuc(RUC ruc) {
+    public Optional<com.minerva.domain.entities.supplier.Supplier> findByRuc(RUC ruc) {
         return jpaSupplierRepository.findByRuc(ruc.value)
                 .map(this::toDomain);
     }
 
     @Override
-    public Optional<Supplier> findByPhone(PhoneNumber phoneNumber) {
+    public Optional<com.minerva.domain.entities.supplier.Supplier> findByPhone(PhoneNumber phoneNumber) {
         return jpaSupplierRepository.findByPhoneNumber(phoneNumber.value)
                 .map(this::toDomain);
     }
 
-    private SupplierEntity toEntity(Supplier supplier) {
+    private SupplierEntity toEntity(com.minerva.domain.entities.supplier.Supplier supplier) {
         return new SupplierEntity(
                 supplier.getSupplierName().value,
                 supplier.getRuc().map(r -> r.value).orElse(null),
@@ -77,8 +76,8 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
         );
     }
 
-    private Supplier toDomain(SupplierEntity entity) {
-        return new Supplier(
+    private com.minerva.domain.entities.supplier.Supplier toDomain(SupplierEntity entity) {
+        return new com.minerva.domain.entities.supplier.Supplier(
                 entity.getSupplierNameId(),
                 entity.getRuc(),
                 entity.getPhoneNumber(),

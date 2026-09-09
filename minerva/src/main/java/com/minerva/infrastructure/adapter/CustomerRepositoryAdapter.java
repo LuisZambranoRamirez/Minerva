@@ -1,6 +1,5 @@
 package com.minerva.infrastructure.adapter;
 
-import com.minerva.domain.entities.customer.Customer;
 import com.minerva.domain.entities.customer.CustomerId;
 import com.minerva.domain.valueObject.PhoneNumber;
 import com.minerva.domain.repositories.CustomerRepository;
@@ -21,7 +20,7 @@ public class CustomerRepositoryAdapter implements CustomerRepository {
     }
 
     @Override
-    public void save(Customer customer) {
+    public void save(com.minerva.domain.entities.customer.Customer customer) {
         jpaCustomerRepository.save(toEntity(customer));
     }
 
@@ -36,34 +35,34 @@ public class CustomerRepositoryAdapter implements CustomerRepository {
     }
 
     @Override
-    public Optional<Customer> findById(CustomerId id) {
+    public Optional<com.minerva.domain.entities.customer.Customer> findById(CustomerId id) {
         return jpaCustomerRepository.findById(id.value())
                 .map(this::toDomain);
     }
 
     @Override
-    public Optional<Customer> findByPhoneNumber(PhoneNumber phoneNumber) {
+    public Optional<com.minerva.domain.entities.customer.Customer> findByPhoneNumber(PhoneNumber phoneNumber) {
         return jpaCustomerRepository.findByPhoneNumber(phoneNumber.value)
                 .map(this::toDomain);
     }
 
     @Override
-    public List<Customer> findAll() {
+    public List<com.minerva.domain.entities.customer.Customer> findAll() {
         return jpaCustomerRepository.findAll()
                 .stream()
                 .map(this::toDomain)
                 .toList();
     }
 
-    private Customer toDomain(CustomerEntity entity) {
-        return new Customer(
+    private com.minerva.domain.entities.customer.Customer toDomain(CustomerEntity entity) {
+        return new com.minerva.domain.entities.customer.Customer(
                 entity.getCustomerNameId(),
                 entity.getRegistrationDate(),
                 entity.getPhoneNumber()
         );
     }
 
-    private CustomerEntity toEntity(Customer customer) {
+    private CustomerEntity toEntity(com.minerva.domain.entities.customer.Customer customer) {
         return new CustomerEntity(
                 customer.getCustomerName().value,
                 customer.getPhoneNumber().orElse(null).value,

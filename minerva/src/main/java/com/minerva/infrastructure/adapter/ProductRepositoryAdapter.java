@@ -1,7 +1,6 @@
 package com.minerva.infrastructure.adapter;
 
 import com.minerva.domain.entities.product.*;
-import com.minerva.domain.entities.stockEntry.StockEntry;
 import com.minerva.domain.repositories.ProductRepository;
 import com.minerva.domain.valueObject.BarCode;
 import com.minerva.domain.valueObject.ProductQuantity;
@@ -40,32 +39,32 @@ public class ProductRepositoryAdapter implements ProductRepository {
 
     @Transactional
     @Override
-    public void registerProduct(Product product, StockEntry stockEntry) {
+    public void registerProduct(com.minerva.domain.entities.product.Product product, com.minerva.domain.entities.stockEntry.StockEntry stockEntry) {
         jpaProductRepository.save(toEntity(product));
         jpaStockEntryRepository.save(toEntity(stockEntry));
     }
 
     @Override
-    public void save(Product product) {
+    public void save(com.minerva.domain.entities.product.Product product) {
         jpaProductRepository.save(toEntity(product));
     }
 
     @Transactional
     @Override
-    public void saveStockEntry(StockEntry stockEntry, Product product) {
+    public void saveStockEntry(com.minerva.domain.entities.stockEntry.StockEntry stockEntry, com.minerva.domain.entities.product.Product product) {
         jpaStockEntryRepository.save(toEntity(stockEntry));
         jpaProductRepository.save(toEntity(product));
     }
 
     @Override
     public void saveUnitToBulk(ProductName unitProductName, ProductName bulkProductName, ProductQuantity quantity) {
-        ProductEntity unitProductEntity = entityManager.getReference(ProductEntity.class, unitProductName.value);
-        ProductEntity bulkProductEntity = entityManager.getReference(ProductEntity.class, bulkProductName.value);
+        ProductEntity unitProduct = entityManager.getReference(ProductEntity.class, unitProductName.value);
+        ProductEntity bulkProduct = entityManager.getReference(ProductEntity.class, bulkProductName.value);
 
         jpaUnitToBulkRepository.save(new UnitToBulkEntity(
                 new UnitToBulkEntity.UnitToBulkId(unitProductName.value, bulkProductName.value),
-                unitProductEntity,
-                bulkProductEntity,
+                unitProduct,
+                bulkProduct,
                 quantity.value,
                 LocalDateTime.now()
         ));
@@ -82,19 +81,19 @@ public class ProductRepositoryAdapter implements ProductRepository {
     }
 
     @Override
-    public Optional<Product> findById(ProductId id) {
+    public Optional<com.minerva.domain.entities.product.Product> findById(ProductId id) {
         return jpaProductRepository.findById(id.value())
                 .map(this::toDomain);
     }
 
     @Override
-    public Optional<Product> findByBarCode(BarCode barCode) {
+    public Optional<com.minerva.domain.entities.product.Product> findByBarCode(BarCode barCode) {
         return jpaProductRepository.findByBarCode(barCode.value)
                 .map(this::toDomain);
     }
 
     @Override
-    public List<Product> findAllProducts() {
+    public List<com.minerva.domain.entities.product.Product> findAllProducts() {
         return jpaProductRepository.findAll()
                 .stream()
                 .map(this::toDomain)
@@ -102,15 +101,15 @@ public class ProductRepositoryAdapter implements ProductRepository {
     }
 
     @Override
-    public List<StockEntry> findAllEntriesByProductId(ProductId id) {
+    public List<com.minerva.domain.entities.stockEntry.StockEntry> findAllEntriesByProductId(ProductId id) {
         return jpaStockEntryRepository.findByProductEntity_ProductNameId(id.value())
                 .stream()
                 .map(this::toDomain)
                 .toList();
     }
 
-    private Product toDomain(ProductEntity entity) {
-        return new Product(
+    private com.minerva.domain.entities.product.Product toDomain(ProductEntity entity) {
+        return new com.minerva.domain.entities.product.Product(
                 entity.getProductNameId(),
                 entity.getGainStrategy(),
                 entity.getGainAmount(),
@@ -124,7 +123,7 @@ public class ProductRepositoryAdapter implements ProductRepository {
         );
     }
 
-    private ProductEntity toEntity(Product product) {
+    private ProductEntity toEntity(com.minerva.domain.entities.product.Product product) {
         return new ProductEntity(
                 product.getNameId().value,
                 product.getGainStrategy(),
@@ -139,17 +138,17 @@ public class ProductRepositoryAdapter implements ProductRepository {
         );
     }
 
-    private StockEntryEntity toEntity(StockEntry stockEntry) {
-        ProductEntity productEntity =
+    private StockEntryEntity toEntity(com.minerva.domain.entities.stockEntry.StockEntry stockEntry) {
+        ProductEntity product =
                 entityManager.getReference(ProductEntity.class, stockEntry.getProductName().value);
 
-        SupplierEntity supplierEntity =
+        SupplierEntity supplier =
                 entityManager.getReference(SupplierEntity.class, stockEntry.getSupplierName().value);
 
         return new StockEntryEntity(
-                stockEntry.getId().asString(),
-                productEntity,
-                supplierEntity,
+                stockEntry.getId().getIdValueAsString(),
+                product,
+                supplier,
                 stockEntry.getUnitPrice().value,
                 stockEntry.getQuantity().value,
                 stockEntry.getExpirationDate().orElse(null),
@@ -157,11 +156,11 @@ public class ProductRepositoryAdapter implements ProductRepository {
         );
     }
 
-    private StockEntry toDomain(StockEntryEntity entity) {
-        return new StockEntry(
+    private com.minerva.domain.entities.stockEntry.StockEntry toDomain(StockEntryEntity entity) {
+        return new com.minerva.domain.entities.stockEntry.StockEntry(
                 entity.getStockEntryId(),
-                entity.getProductEntity().getProductNameId(),
-                entity.getSupplierEntity().getSupplierNameId(),
+                entity.getProduct().getProductNameId(),
+                entity.getSupplier().getSupplierNameId(),
                 entity.getUnitPrice(),
                 entity.getQuantity(),
                 entity.getExpirationDate(),

@@ -1,7 +1,7 @@
 package com.minerva.application.port.driven;
 
-import com.minerva.domain.entities.userAction.UserAction;
+import com.minerva.domain.entities.auditEvent.AuditEvent;
 
 public interface AuditService {
-    void register(UserAction userAction);
+    void register(AuditEvent auditEvent);
 }

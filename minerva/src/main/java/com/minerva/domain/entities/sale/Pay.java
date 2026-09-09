@@ -9,10 +9,8 @@ import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.id.PayIdImpl;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
-import java.util.UUID;
 
 class Pay extends Entity<PayId> {
     private final Money amount;
@@ -31,20 +29,11 @@ class Pay extends Entity<PayId> {
         this.registrationDate = LocalDateTime.now();
     }
 
-    Pay(UUID payId, BigDecimal amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {
-        PayIdImpl tempId;
-        try {
-            if (paymentMethod == null) throw new InvalidDomainArgumentException("El método de pago no puede ser nulo");
-            if (registrationDate == null) throw new InvalidDomainArgumentException("La fecha de registro no puede ser nula");
-
-            tempId = new PayIdImpl(payId);
-            this.amount = new Money(amount);
-            this.paymentMethod = paymentMethod;
-            this.registrationDate = registrationDate;
-        } catch (InvalidDomainArgumentException e) {
-            throw new EntityRestoreException("Error al crear el pago: " + e.getMessage(), e);
-        }
-        super(tempId);
+    Pay(PayId payId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {
+        super(payId);
+        this.amount = amount;
+        this.paymentMethod = paymentMethod;
+        this.registrationDate = registrationDate;
     }
 
     public Money getAmount() {

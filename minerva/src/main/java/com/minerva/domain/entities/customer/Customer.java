@@ -3,7 +3,6 @@ package com.minerva.domain.entities.customer;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
-import com.minerva.domain.exceptions.EntityRestoreException;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.valueObject.FullName;
 import com.minerva.domain.valueObject.PhoneNumber;
@@ -27,17 +26,11 @@ public class Customer extends Entity<CustomerId> {
         if (phoneNumber != null) this.phoneNumber = new PhoneNumber(phoneNumber);
     }
 
-    public Customer(UUID customerId, String fullName, LocalDateTime registrationDate, String phoneNumber) {
-        CustomerId customerIdValue;
-        try {
-            customerIdValue = new CustomerIdImpl(customerId);
-            this.fullName = new FullName(fullName);
-            this.registrationDate = registrationDate;
-            if (phoneNumber != null) this.phoneNumber = new PhoneNumber(phoneNumber);
-        } catch (InvalidDomainArgumentException e) {
-            throw new EntityRestoreException("Error al crear el cliente: " + e.getMessage(), e);
-        }
-        super(customerIdValue);
+    public Customer(CustomerId customerId, FullName fullName, PhoneNumber phoneNumber, LocalDateTime registrationDate) {
+        super(customerId);
+        this.fullName = fullName;
+        this.phoneNumber = phoneNumber;
+        this.registrationDate = registrationDate;
     }
 
     public FullName getFullName() {

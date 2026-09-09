@@ -1,6 +1,6 @@
 package com.minerva.application.port.drivers;
 
-import com.minerva.domain.constants.Category;
+import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.GainStrategy;
 import com.minerva.domain.constants.SaleType;
 import com.minerva.domain.entities.product.Product;
@@ -19,7 +19,7 @@ public interface ProductUseCase {
                                  BigDecimal reorderLevel,
                                  String barCode,
                                  SaleType saleType,
-                                 Category category,
+                                 ProductCategory productCategory,
                                  String purchasedFromSupplierId,
                                  BigDecimal purchaseUnitPrice,
                                  BigDecimal purchaseQuantity,

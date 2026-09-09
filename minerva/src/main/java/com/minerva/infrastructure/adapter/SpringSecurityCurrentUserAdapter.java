@@ -1,7 +1,5 @@
 package com.minerva.infrastructure.adapter;
 
-import com.minerva.application.port.driven.CurrentUserProvider;
-import com.minerva.application.port.driven.UserContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;

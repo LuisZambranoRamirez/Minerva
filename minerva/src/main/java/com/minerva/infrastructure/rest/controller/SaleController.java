@@ -107,7 +107,7 @@ public class SaleController {
 
     public record RegisterSaleRequest(
             @NotBlank String customerId,
-            @NotNull List<Sale.SaleItem> items,
+            @NotNull List<Sale.SaleItemCreateDTO> items,
             @NotNull List<Sale.PayData> payments
     ) {}
 

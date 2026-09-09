@@ -4,17 +4,13 @@ import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.entities.auditEvent.NumericAttribute;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.exceptions.EntityRestoreException;
-import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.valueObject.id.SaleDetailIdImpl;
 
-import java.math.BigDecimal;
 import java.util.Set;
-import java.util.UUID;
 
 class SaleDetail extends Entity<SaleDetailId> {
     private final ProductQuantity quantity;
@@ -31,16 +27,10 @@ class SaleDetail extends Entity<SaleDetailId> {
         this.unitPrice = unitPrice;
     }
 
-    public SaleDetail(UUID saleDetailId, BigDecimal quantity, BigDecimal unitPrice) {
-        SaleDetailIdImpl tempId;
-        try {
-            tempId = new SaleDetailIdImpl(saleDetailId);
-            this.quantity = new ProductQuantity(quantity);
-            this.unitPrice = new Money(unitPrice);
-        } catch (InvalidDomainArgumentException e) {
-            throw new EntityRestoreException("Error al crear el detalle de venta: " + e.getMessage(), e);
-        }
-        super(tempId);
+    public SaleDetail(SaleDetailId saleDetailId, ProductQuantity quantity, Money unitPrice) {
+        super(saleDetailId);
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
     }
 
     // REVISAR ESTO QUE YA ME GANO EL SUEÑO, si este mensaje sigue aqui es porque no lo revisé.
