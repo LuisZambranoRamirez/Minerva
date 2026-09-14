@@ -138,7 +138,7 @@ public class ProductService extends Service implements ProductUseCase {
             return Result.fail(e.getMessage());
         }
 
-        Result<Void> validationResult = unitProduct.validateBulkAssociation(bulkProduct, productQuantity);
+        Result<Void> validationResult = unitProduct.addBulkAssociation(bulkProduct, productQuantity);
         if (validationResult.isFail()) return validationResult;
 
         productRepository.saveUnitToBulk(unitProduct.getNameId(), bulkProduct.getNameId(), productQuantity);
