@@ -68,3 +68,12 @@ example
 -- usar el nombre de las variables en vez de temp usar Value al final
 
 -- Registrar read an write en usaer action, que operacion en la db seria
+
+
+------------------------------------------------------------------------------------
+Mejorar el nombre de los atributos, por ejemplo en vez de usar quantity usar productQuantity, esto se debe reflejar en la db, aplicar esto a todas las entidades
+class SaleDetail extends Entity<SaleDetailId> {
+    private final SaleId saleId;
+    private final ProductId productId;
+    private final ProductQuantity quantity;
+    private final Money unitPrice;
