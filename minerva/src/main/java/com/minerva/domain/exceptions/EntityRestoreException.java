@@ -6,4 +6,8 @@ public class EntityRestoreException extends UnexpectedDomainException {
         super(message, cause);
     }
 
+    public EntityRestoreException(String message) {
+        super(message);
+    }
+
 }
