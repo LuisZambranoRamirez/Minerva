@@ -9,7 +9,7 @@ CREATE TYPE audit_event_type AS ENUM (
 );
 
 CREATE TYPE modifier AS ENUM (
-    'FRIO'
+    'CONGELADO'
 );
 
 CREATE TYPE gain_strategy AS ENUM (
@@ -339,13 +339,11 @@ CREATE TABLE product_return (
 
 CREATE TABLE product_modifier (
     id_product UUID NOT NULL,
-    id_modifier_name modifier NOT NULL,
+    modifier modifier NOT NULL,
 
     extra_price NUMERIC(10,2) NOT NULL,
 
-    registration_date TIMESTAMP NOT NULL,
-
-    PRIMARY KEY (id_product, id_modifier_name),
+    PRIMARY KEY (id_product, modifier),
 
     CONSTRAINT fk_product_modifier_product
         FOREIGN KEY (id_product)
@@ -363,7 +361,6 @@ CREATE TABLE sale_detail_modifier (
     id_sale_detail UUID NOT NULL,
     id_modifier_name modifier NOT NULL,
 
-    quantity NUMERIC(10,3) NOT NULL,
     extra_price NUMERIC(10,2) NOT NULL,
 
     PRIMARY KEY (id_sale_detail, id_modifier_name),
