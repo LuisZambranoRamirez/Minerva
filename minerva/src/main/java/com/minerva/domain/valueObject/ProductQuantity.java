@@ -75,7 +75,7 @@ public class ProductQuantity extends ValueObject<BigDecimal> {
     }
 
     public boolean isDecimal() {
-        return getValue().scale() > 0;
+        return getValue().remainder(BigDecimal.ONE).compareTo(BigDecimal.ZERO) != 0;
     }
 
     public boolean isInteger() {
