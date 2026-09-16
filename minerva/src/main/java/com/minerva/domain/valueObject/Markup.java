@@ -7,6 +7,10 @@ import com.minerva.domain.exceptions.NullValueException;
 import java.math.BigDecimal;
 
 public class Markup extends ValueObject<Markup.Value> {
+    public record Value(
+            BigDecimal amount,
+            GainStrategy gainStrategy
+    ) {}
 
     public Markup(BigDecimal amount, GainStrategy gainStrategy) throws InvalidDomainArgumentException {
         if (gainStrategy == null) throw new NullValueException("Seleccione una estrategia de ganancia.");
@@ -21,8 +25,4 @@ public class Markup extends ValueObject<Markup.Value> {
         };
     }
 
-    public record Value(
-            BigDecimal amount,
-            GainStrategy gainStrategy
-    ) {}
 }
