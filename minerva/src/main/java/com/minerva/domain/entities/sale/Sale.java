@@ -27,30 +27,37 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     private final List<Pay> pays =  new LinkedList<>();
     private final Map<ProductId, SaleDetail> saleDetails = new HashMap<>();
 
-    public Sale(UUID customerId, List<SaleItemCreateDTO> items) throws DomainException {
+    public Sale(UUID customerId, List<SaleDetailCreateDTO> items) throws DomainException {
         super(SaleIdImpl.generate());
         this.customerId = new CustomerIdImpl(customerId);
-        this.addSaleItem(items);
+        this.addSaleDetail(items);
         this.registrationDate = LocalDateTime.now();
     }
 
-    public Sale(SaleId saleId, CustomerId customerId, LocalDateTime registrationDate, List<SaleItemRestoreDTO> saleItemRestoreDTOList, List<PayRestoreDTO> payRestoreDTOS) {
+    public Sale(SaleId saleId, CustomerId customerId, LocalDateTime registrationDate, List<SaleDetailRestoreDTO> saleItemRestoreDTOList, List<PayRestoreDTO> payRestoreDTOS) {
         super(saleId);
         this.customerId = customerId;
         this.registrationDate = registrationDate;
 
-        for (SaleItemRestoreDTO saleItemRestoreDTO : saleItemRestoreDTOList) {
+        for (SaleDetailRestoreDTO saleDetailRestoreDTO : saleItemRestoreDTOList) {
+            if (this.getId() != saleDetailRestoreDTO.saleId) throw new EntityRestoreException("El ID de la venta no coincide con el ID de los detalles de venta.");
+
             SaleDetail saleDetail = new SaleDetail(
-                    saleItemRestoreDTO.saleDetailId,
-                    saleItemRestoreDTO.quantity,
-                    saleItemRestoreDTO.unitPrice
+                    this.getId(),
+                    saleDetailRestoreDTO.saleDetailId,
+                    saleDetailRestoreDTO.productId,
+                    saleDetailRestoreDTO.quantity,
+                    saleDetailRestoreDTO.unitPrice
             );
 
-            this.saleDetails.put(saleItemRestoreDTO.productId, saleDetail);
+            this.saleDetails.put(saleDetail.getProductId(), saleDetail);
         }
 
         for (PayRestoreDTO payRestoreDTO : payRestoreDTOS) {
+            if (this.getId() != payRestoreDTO.saleId) throw new EntityRestoreException("El ID de la venta no coincide con el ID de los pagos.");
+
             Pay pay = new Pay(
+                this.getId(),
                 payRestoreDTO.payId,
                 payRestoreDTO.amount,
                 payRestoreDTO.paymentMethod,
@@ -93,33 +100,29 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     @Override
     public Optional<ProductQuantity> getSoldQuantity(ProductId productId) {
         SaleDetail saleDetail = saleDetails.get(productId);
-
         if (saleDetail == null) return Optional.empty();
-
         return Optional.of(saleDetail.getQuantity());
     }
 
-    public record SaleItemCreateDTO(ProductSale productSale, BigDecimal quantity, BigDecimal unitPrice) {}
-    public record SaleItemReadDTO(SaleId saleId, SaleDetailId saleDetailId, ProductId productId, ProductQuantity productQuantity, Money unitPrice) {}
-    public record SaleItemRestoreDTO(SaleDetailId saleDetailId, ProductId productId, ProductQuantity quantity, Money unitPrice) {}
+    public record SaleDetailCreateDTO(ProductSale productSale, BigDecimal quantity, BigDecimal unitPrice) {}
+    public record SaleDetailReadDTO(SaleId saleId, SaleDetailId saleDetailId, ProductId productId, ProductQuantity productQuantity, Money unitPrice) {}
+    public record SaleDetailRestoreDTO(SaleId saleId, SaleDetailId saleDetailId, ProductId productId, ProductQuantity quantity, Money unitPrice) {}
 
     public record PayCreateDTO(BigDecimal amount, PaymentMethod paymentMethod) {}
-    public record PayReadDTO(PayId payId, SaleId saleId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {}
-    public record PayRestoreDTO(PayId payId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {}
+    public record PayReadDTO(SaleId saleId, PayId payId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {}
+    public record PayRestoreDTO(SaleId saleId, PayId payId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {}
 
     // nota: se deberia poner un minimo de ganancia sobre el costo cuando se negocia con el cliente el precio, por el momento solo se mira si es menor que el costo
-    private void addSaleItem(List<SaleItemCreateDTO> items) throws DomainException {
+    private void addSaleDetail(List<SaleDetailCreateDTO> items) throws DomainException {
         if (items == null) throw new NullValueException("La venta debe tener al menos un item");
         if (items.isEmpty()) throw new DomainException("La venta debe tener al menos un item");
 
-        for (SaleItemCreateDTO item : items) {
+        for (SaleDetailCreateDTO item : items) {
             ProductSale productSale = item.productSale();
 
-            if (saleDetails.containsKey(productSale.getId())) {
-                throw new DomainException(
-                        "El producto ya existe en la venta. Modifique la cantidad en lugar de agregarlo nuevamente."
-                );
-            }
+            if (saleDetails.containsKey(productSale.getId()))
+                throw new DomainException("El producto ya existe en la venta. Modifique la cantidad en lugar de agregarlo nuevamente.");
+
 
             Money unitPriceMoney;
 
@@ -128,15 +131,14 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
             } else {
                 unitPriceMoney = new Money(item.unitPrice());
 
-                if (unitPriceMoney.isLessThan(productSale.getCost())) {
-                    throw new DomainException(
-                            "El precio de venta no puede ser menor que el costo."
-                    );
-                }
+                if (unitPriceMoney.isLessThan(productSale.getCost()))
+                    throw new DomainException("El precio de venta no puede ser menor que el costo.");
             }
 
             SaleDetail newDetail = new SaleDetail(
-                    new ProductQuantity(item.quantity()),
+                    this.getId(),
+                    productSale.getId(),
+                    new ProductQuantity(item.quantity),
                     unitPriceMoney
             );
 
@@ -144,26 +146,27 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
         }
     }
 
-    public List<SaleItemReadDTO> getSaleDetails() {
-        List<SaleItemReadDTO> saleItemReadDTOList = new ArrayList<>(saleDetails.size());
+    public List<SaleDetailReadDTO> getSaleDetails() {
+        List<SaleDetailReadDTO> saleDetailReadDTOList = new ArrayList<>(saleDetails.size());
 
-        saleDetails.forEach((productId, saleDetail) -> saleItemReadDTOList.add(
-                new SaleItemReadDTO(
+        saleDetails.forEach((productId, saleDetail) -> saleDetailReadDTOList.add(
+                new SaleDetailReadDTO(
                         this.getId(),
                         saleDetail.getId(),
                         productId,
                         saleDetail.getQuantity(),
                         saleDetail.getUnitPrice())));
 
-        return saleItemReadDTOList;
+        return saleDetailReadDTOList;
     }
 
     public Result<Void> addPayment(PayCreateDTO payCreateDTO) {
-        if (isDueCanceled()) return Result.fail("La VENTA ya esta CANCELADA");
+        if (payCreateDTO == null) return Result.fail("El pago es obligatorio.");
+        if (isFullyPaid()) return Result.fail("La venta ya está completamente pagada.");
 
         Pay payCreated;
         try {
-            payCreated = new Pay(new Money(payCreateDTO.amount), payCreateDTO.paymentMethod);
+            payCreated = new Pay(this.getId(), new Money(payCreateDTO.amount), payCreateDTO.paymentMethod);
         } catch (DomainException e) {
             return Result.fail(e.getMessage());
         }
@@ -181,8 +184,8 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
         for (Pay pay : pays) {
             payReadDTOList.add(
                     new PayReadDTO(
-                            pay.getId(),
                             this.getId(),
+                            pay.getId(),
                             pay.getAmount(),
                             pay.getPaymentMethod(),
                             pay.getRegistrationDate()
@@ -212,7 +215,7 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
         }
     }
 
-    public boolean isDueCanceled() {
+    public boolean isFullyPaid() {
         return calculateAmountDue().isZero();
     }
 

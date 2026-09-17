@@ -13,24 +13,28 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 class Pay extends Entity<PayId> {
+    private final SaleId saleId;
     private final Money amount;
     private final PaymentMethod paymentMethod;
     private final LocalDateTime registrationDate;
 
     private static final Money MIN_AMOUNT = Money.tenCents();
 
-    Pay(Money amount, PaymentMethod paymentMethod) throws DomainException {
+    public Pay(SaleId saleId, Money amount, PaymentMethod paymentMethod) throws DomainException {
+        if (saleId == null) throw new UnexpectedDomainException("El saleId es nulo");
         if (paymentMethod == null) throw new NullValueException("El método de pago no puede estar vacío.");
         if (amount != null && amount.isLessThan(MIN_AMOUNT)) throw new MinimumAmountException("El MONTO debe ser mayor o igual a S/" + MIN_AMOUNT);
 
         super(PayIdImpl.generate());
+        this.saleId = saleId;
         this.amount = amount;
         this.paymentMethod = paymentMethod;
         this.registrationDate = LocalDateTime.now();
     }
 
-    Pay(PayId payId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {
+    public Pay(SaleId saleId, PayId payId, Money amount, PaymentMethod paymentMethod, LocalDateTime registrationDate) {
         super(payId);
+        this.saleId = saleId;
         this.amount = amount;
         this.paymentMethod = paymentMethod;
         this.registrationDate = registrationDate;
