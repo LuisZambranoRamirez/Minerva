@@ -22,7 +22,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
     private final SKU sku;
     private final ProductName productName;
     private Markup markup;
-    private final ProductStock productStock;
+    private ProductStock productStock;
     //Puede ser null
     private final BarCode barCode;
     //----------------------------------------------
@@ -64,7 +64,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
         super(ProductIdImpl.generate());
         this.sku = new SKU(sku);
         this.productName = new ProductName(productName);
-        this.productStock = new ProductStock(saleType, new ProductQuantity(initialStock), new ProductQuantity(reorderLevel));
+        this.productStock = new ProductStock(new ProductQuantity(initialStock), saleType, new ProductQuantity(reorderLevel));
         this.markup = new Markup(gainAmount, gainStrategy);
         this.productCategory = productCategory;
         this.cost = new Money(purchasePrice);
@@ -85,7 +85,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
             ProductName productName,
             GainStrategy gainStrategy,
             BigDecimal gainAmount,
-            BigDecimal reorderLevel,
+            ProductQuantity reorderLevel,
             String barCode,
             SaleType saleType,
             ProductQuantity stock,
@@ -97,15 +97,13 @@ public class Product extends Entity<ProductId> implements ProductSale {
         try {
             this.sku = sku;
             this.productName = productName;
-            this.stock = stock;
+            this.productStock = new ProductStock(stock, saleType, reorderLevel);
             this.markup = new Markup(gainAmount, gainStrategy);
-            this.saleType = saleType;
             this.productCategory = productCategory;
-            this.reorderLevel = reorderLevel == null ? null : new ProductQuantity(reorderLevel);
             this.barCode = barCode == null ? null : new BarCode(barCode);
             this.cost = cost;
             this.registrationDate = registrationDate;
-        } catch (InvalidDomainArgumentException e) {
+        } catch (DomainException e) {
             throw new EntityRestoreException("Error al crear el producto: " + e.getMessage(), e);
         }
     }
@@ -129,37 +127,23 @@ public class Product extends Entity<ProductId> implements ProductSale {
     //----------------------------------
 
     private Result<Void> increaseStock(ProductQuantity quantityToAdd) {
-        ProductQuantity newStockValue = this.stock.add(quantityToAdd);
-        return updateStock(newStockValue);
+        Result<ProductStock> result = this.productStock.increaseStock(quantityToAdd);
+
+        if (result.isFail())
+            return Result.fail(result.getMessage());
+
+        this.productStock = result.getData();
+        return Result.success(null);
     }
 
     private Result<Void> decreaseStock(ProductQuantity quantityToSubtract) {
-        if (quantityToSubtract == null) return Result.fail("La cantidad a descontar no puede ser nula.");
-        if (this.stock.isZero()) return Result.fail("No hay stock disponible para este producto.");
+        Result<ProductStock> result = this.productStock.decreaseStock(quantityToSubtract);
 
-        try {
-            ProductQuantity newStockValue = this.stock.subtract(quantityToSubtract);
-            if (newStockValue.isLessThanZero())
-                return Result.fail(
-                    "No hay suficiente stock para realizar la operación. " +
-                    "Stock disponible: " + this.stock.getValue() +
-                    ". Cantidad solicitada: " + quantityToSubtract.getValue() + "."
-                );
-            return updateStock(newStockValue);
-        } catch (MinimumAmountException e) {
-            return Result.fail(e.getMessage());
-        }
-    }
+        if (result.isFail())
+            return Result.fail(result.getMessage());
 
-    private Result<Void> updateStock(ProductQuantity newStockValue) {
-        if (newStockValue == null)
-            return Result.fail("El nuevo valor de stock no puede ser nulo.");
-
-        if (SaleType.UNIDAD.equals(saleType) && newStockValue.isDecimal())
-            return Result.fail("Este producto se maneja por unidades. Ingrese una cantidad entera.");
-  
-        this.stock = newStockValue;
-        return Result.success(null);  
+        this.productStock = result.getData();
+        return Result.success(null);
     }
 
     // -----------------------------------------------------
@@ -168,7 +152,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
         if (quantity == null) return Result.fail("La cantidad no puede estar vacío");
 
         if (this.equals(bulkProduct)) return Result.fail("No es posible asociar un producto consigo mismo.");
-        if (saleType != SaleType.UNIDAD ) return Result.fail("El producto -- " + getProductName() + " -- se vende por unidad y no permite asociar otro producto.");
+        if (productStock.getValue().saleType() != SaleType.UNIDAD ) return Result.fail("El producto -- " + getProductName() + " -- se vende por unidad y no permite asociar otro producto.");
 
         if (bulkProduct.getSaleType() != SaleType.GRANEL) return Result.fail("El producto -- " + bulkProduct.getProductName() + " -- debe venderse a granel para poder ser asociado.");
         if (quantity.isZeroOrLess()) return Result.fail("La cantidad debe ser mayor a cero");
@@ -197,11 +181,11 @@ public class Product extends Entity<ProductId> implements ProductSale {
     }
 
     public ProductQuantity getStock() {
-        return ProductStock;
+        return productStock.getStock();
     }
 
     public Optional<ProductQuantity> getReorderLevel() {
-        return Optional.ofNullable(reorderLevel);
+        return productStock.getReorderLevel();
     }
 
     public GainStrategy getGainStrategy() {
@@ -209,7 +193,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
     }
 
     public SaleType getSaleType() {
-        return saleType;
+        return productStock.getSaleType();
     }
 
     public ProductCategory getCategory() {
@@ -245,12 +229,12 @@ public class Product extends Entity<ProductId> implements ProductSale {
                 new StringAttribute(getId()),
                 new StringAttribute(sku),
                 new StringAttribute(productName),
-                new NumericAttribute("stock", ProductStock),
+                new NumericAttribute("stock", productStock.getStock()),
                 new StringAttribute(getGainStrategy()),
                 new NumericAttribute("gainAmount", getGainAmount()),
-                new NumericAttribute("reorderLevel", reorderLevel),
+                new NumericAttribute("reorderLevel", productStock.getReorderLevel().orElse(null)),
                 new StringAttribute(barCode),
-                new StringAttribute(saleType),
+                new StringAttribute(productStock.getSaleType()),
                 new NumericAttribute("cost", cost),
                 new NumericAttribute("price", calculatePrice()),
                 new StringAttribute(productCategory),

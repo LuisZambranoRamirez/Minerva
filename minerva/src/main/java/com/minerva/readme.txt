@@ -77,3 +77,6 @@ class SaleDetail extends Entity<SaleDetailId> {
     private final ProductId productId;
     private final ProductQuantity quantity;
     private final Money unitPrice;
+
+
+-- hacer que result reciba como parametro los expecion

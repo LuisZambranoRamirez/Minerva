@@ -5,75 +5,97 @@ import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.valueObject.ProductQuantity;
+import com.minerva.domain.valueObject.ValueObject;
 
 import java.util.Optional;
 
-public class ProductStock {
+public class ProductStock extends ValueObject<ProductStock.Value> {
 
-    private final SaleType saleType;
-    private ProductQuantity quantity;
-    //Puede ser null
-    private ProductQuantity reorderLevel;
-    //-----------------------------------
+    public record Value(
+            ProductQuantity stock,
+            SaleType saleType,
+            Optional<ProductQuantity> reorderLevel
+    ) {
+    }
 
-    public ProductStock(SaleType saleType, ProductQuantity stock, ProductQuantity reorderLevel) throws DomainException {
+    public ProductStock(ProductQuantity stock, SaleType saleType, ProductQuantity reorderLevel) throws DomainException {
+        super(new ProductStock.Value(stock, saleType, Optional.ofNullable(reorderLevel)));
 
         if (saleType == null)
             throw new NullValueException("Seleccione el tipo de venta.");
 
-        this.saleType = saleType;
-        this.quantity = validateQuantity(stock, "El stock");
-        this.reorderLevel = reorderLevel == null ? null : validateQuantity(reorderLevel, "El nivel de reposición");
+        Result<Void> quantityResult = validateQuantity(stock);
+        if (quantityResult.isFail())
+            throw new DomainException(quantityResult.getMessage());
+
 
         if (reorderLevel != null) {
-            this.reorderLevel = new ProductQuantity(reorderLevel);
-            if (SaleType.UNIDAD.equals(saleType) && this.reorderLevel.isDecimal())
-                throw new DomainException("El nivel de reposición no puede ser decimal para productos vendidos por unidad.");
+            Result<Void> reorderLevelResult = validateQuantity(reorderLevel);
+
+            if (reorderLevelResult.isFail())
+                throw new DomainException(reorderLevelResult.getMessage());
         }
     }
 
-    public Result<Void> increaseStock(ProductQuantity quantity) {
-        ProductQuantity newStock = quantity.add(quantity);
-        return updateStock(newStock);
-    }
+    public Result<ProductStock> increaseStock(ProductQuantity quantityToAdd) {
+        ProductQuantity newStockValue = getValue().stock().add(quantityToAdd);
 
-    private Result<Void> updateStock(ProductQuantity newStock) {
-        if (saleType == SaleType.UNIDAD && newStock.isDecimal()) {
-            return Result.fail(
-                    "Este producto se maneja por unidades. " +
-                            "Ingrese una cantidad entera."
+        try {
+            ProductStock newProductStock = new ProductStock(
+                    newStockValue,
+                    getValue().saleType(),
+                    getValue().reorderLevel().orElse(null)
             );
-        }
 
-        this.quantity = newStock;
+            return Result.success(newProductStock);
+        } catch (DomainException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    // que no sea negativo se controla en la clase productquantity
+    public Result<ProductStock> decreaseStock(ProductQuantity quantityToSubtract) {
+        if (quantityToSubtract == null)
+            return Result.fail("La cantidad a descontar no puede ser nula.");
+
+        if (getValue().stock().isZero())
+            return Result.fail("No hay stock disponible para este producto.");
+
+        try {
+            ProductQuantity newStockValue =
+                    getValue().stock().subtract(quantityToSubtract);
+
+            ProductStock newProductStock = new ProductStock(
+                    newStockValue,
+                    getValue().saleType(),
+                    getValue().reorderLevel().orElse(null)
+            );
+
+            return Result.success(newProductStock);
+        } catch (DomainException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    private Result<Void> validateQuantity(ProductQuantity quantity) {
+        if (quantity == null)
+            return Result.fail("El nuevo valor de stock no puede ser nulo.");
+
+        if (SaleType.UNIDAD.equals(getValue().saleType) && quantity.isDecimal())
+            return Result.fail("Este producto se maneja por unidades. Ingrese una cantidad entera.");
+
         return Result.success(null);
     }
 
-
-
-    private ProductQuantity validateQuantity(ProductQuantity quantity, String field) throws DomainException {
-
-        if (quantity == null)
-            throw new NullValueException(field + " no puede ser nulo.");
-
-        if (SaleType.UNIDAD.equals(saleType) && quantity.isDecimal()) {
-            throw new DomainException(
-                    field + " debe ser una cantidad entera para productos vendidos por unidad."
-            );
-        }
-
-        return quantity;
-    }
-
     public ProductQuantity getStock() {
-        return quantity;
-    }
-
-    public Optional<ProductQuantity> getReorderLevel() {
-        return Optional.ofNullable(reorderLevel);
+        return getValue().stock;
     }
 
     public SaleType getSaleType() {
-        return saleType;
+        return getValue().saleType;
+    }
+
+    public Optional<ProductQuantity> getReorderLevel() {
+        return getValue().reorderLevel;
     }
 }
