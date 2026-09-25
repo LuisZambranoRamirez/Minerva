@@ -1,6 +1,9 @@
 package com.minerva.infrastructure.rest.config.filter;
 
 import com.minerva.infrastructure.rest.service.JwtService;
+import com.minerva.infrastructure.rest.exception.SecurityErrorWriter;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -25,8 +29,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private JwtService jwtService;
-    private UserDetailsService userDetailsService;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
+    private final SecurityErrorWriter errorWriter;
 
     @Override
     protected void doFilterInternal(
@@ -42,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         //bearer
         // Si no se encunetra el Authorization entonces pasa como anonimo
-        if (authHeader == null || !authHeader.startsWith("Bearer")) {
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
             log.debug("No se encontro token");
             filterChain.doFilter(request, response);
             return;
@@ -61,7 +66,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                 if (!userDetails.isEnabled() || !jwtService.isTokenValid(jwt, userDetails)) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    SecurityContextHolder.clearContext();
+                    errorWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized",
+                            "El token no es válido para el usuario.", request.getRequestURI());
                     return;
                 }
 
@@ -80,9 +87,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 log.info("User logeado: {} - Ruta: {}", username, request.getRequestURI());
             }
 
-        } catch (Exception e) {
+        } catch (ExpiredJwtException e) {
             SecurityContextHolder.clearContext();
-            log.error("Error en el filtro: {}", e.getMessage());
+            log.debug("Token expirado en {}", request.getRequestURI());
+            errorWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized",
+                    "El token expiró. Iniciá sesión nuevamente.", request.getRequestURI());
+            return;
+        } catch (JwtException | IllegalArgumentException e) {
+            SecurityContextHolder.clearContext();
+            log.debug("Token inválido en {}", request.getRequestURI());
+            errorWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized",
+                    "El token es inválido.", request.getRequestURI());
+            return;
+        } catch (UsernameNotFoundException e) {
+            SecurityContextHolder.clearContext();
+            log.debug("El usuario del token ya no existe o está inactivo en {}", request.getRequestURI());
+            errorWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized",
+                    "El token es inválido.", request.getRequestURI());
+            return;
         }
 
         filterChain.doFilter(request, response);

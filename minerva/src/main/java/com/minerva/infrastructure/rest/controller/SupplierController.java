@@ -1,8 +1,10 @@
 package com.minerva.infrastructure.rest.controller;
 
-import com.minerva.application.service.SupplierService;
+import com.minerva.application.port.drivers.SupplierUseCase;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.entities.supplier.Supplier;
+import com.minerva.infrastructure.rest.exception.BadRequestException;
+import com.minerva.application.exceptions.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
@@ -16,9 +18,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/suppliers")
 public class SupplierController {
 
-    private final SupplierService supplierService;
+    private final SupplierUseCase supplierService;
 
-    public SupplierController(SupplierService supplierService) {
+    public SupplierController(SupplierUseCase supplierService) {
         this.supplierService = supplierService;
     }
 
@@ -35,41 +37,41 @@ public class SupplierController {
         );
 
         if (result.isFail()) {
-            return ResponseEntity.badRequest().body(result.getMessage());
+            throw new BadRequestException(result.getMessage());
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PatchMapping("/{supplierName}/phone-number")
+    @PatchMapping("/{supplierId}/phone-number")
     public ResponseEntity<?> updatePhoneNumber(
-            @PathVariable String supplierName,
+            @PathVariable String supplierId,
             @Valid @RequestBody UpdatePhoneRequest request) {
 
         Result<Void> result = supplierService.updatePhoneNumber(
-                supplierName,
+                supplierId,
                 request.phoneNumber()
         );
 
         if (result.isFail()) {
-            return ResponseEntity.badRequest().body(result.getMessage());
+            throw new BadRequestException(result.getMessage());
         }
 
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/{supplierName}/ruc")
+    @PatchMapping("/{supplierId}/ruc")
     public ResponseEntity<?> updateRuc(
-            @PathVariable String supplierName,
+            @PathVariable String supplierId,
             @Valid @RequestBody UpdateRucRequest request) {
 
         Result<Void> result = supplierService.updateRuc(
-                supplierName,
+                supplierId,
                 request.ruc()
         );
 
         if (result.isFail()) {
-            return ResponseEntity.badRequest().body(result.getMessage());
+            throw new BadRequestException(result.getMessage());
         }
 
         return ResponseEntity.ok().build();
@@ -88,12 +90,12 @@ public class SupplierController {
         return ResponseEntity.ok(suppliers);
     }
 
-    @GetMapping("/{supplierName}")
-    public ResponseEntity<?> findById(@PathVariable String supplierName) {
+    @GetMapping("/{supplierId}")
+    public ResponseEntity<?> findById(@PathVariable String supplierId) {
 
-        return supplierService.findById(supplierName)
+        return supplierService.findById(supplierId)
                 .map(supplier -> ResponseEntity.ok(mapToResponse(supplier)))
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado."));
     }
 
     @GetMapping("/ruc/{ruc}")
@@ -101,7 +103,7 @@ public class SupplierController {
 
         return supplierService.findByRuc(ruc)
                 .map(supplier -> ResponseEntity.ok(mapToResponse(supplier)))
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado."));
     }
 
     @GetMapping("/phone/{phoneNumber}")
@@ -109,16 +111,17 @@ public class SupplierController {
 
         return supplierService.findByPhone(phoneNumber)
                 .map(supplier -> ResponseEntity.ok(mapToResponse(supplier)))
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado."));
     }
 
     // --------------------- MAPPER ---------------------
 
     private SupplierResponse mapToResponse(Supplier supplier) {
         return new SupplierResponse(
-                supplier.getSupplierName().value,
-                supplier.getRuc().map(r -> r.value).orElse(null),
-                supplier.getPhoneNumber().map(p -> p.value).orElse(null)
+                supplier.getId().getIdValueAsString(),
+                supplier.getSupplierName().getValue(),
+                supplier.getRuc().map(r -> r.getValue()).orElse(null),
+                supplier.getPhoneNumber().map(p -> p.getValue()).orElse(null)
         );
     }
 
@@ -139,6 +142,7 @@ public class SupplierController {
     ) {}
 
     public record SupplierResponse(
+            String supplierId,
             String supplierName,
             String ruc,
             String phoneNumber

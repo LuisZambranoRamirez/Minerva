@@ -2,29 +2,37 @@ spring:
   application:
     name: minerva
   datasource:
-    # revisar que hace &allowPublicKeyRetrieval=true
-    url: jdbc:postgresql://localhost:5432/apolo?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true  # URL de conexión a MySQL
-    username: postgres  # Usuario de la base de datos
-    password: "Drakotako147258369#"   # Contraseña de la base de datos
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/minerva}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: Esquema creado manualmente antes de Flyway
+    validate-on-migrate: true
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: none  # 🔧 Controla cómo se crea o actualiza el esquema de DB
-        # - update: actualiza el esquema automáticamente (útil en desarrollo)
-        # - create: crea las tablas desde cero
-      # - none: desactiva cambios automáticos (usar Flyway/Liquibase en producción)
-    show-sql: true  # 🔍 Muestra las consultas SQL en consola (activar solo en desarrollo)
+      # Flyway administra el esquema; Hibernate solamente valida/mapea entidades.
+      ddl-auto: none
+    show-sql: ${JPA_SHOW_SQL:false}
 
 server:
-  port: 8080  # Puerto donde correrá la aplicación
-  #ssl:
-  #  key-store: classpath:sierdgtt.p12  # Ruta del keystore
-  #  key-store-password: mongo1234       # Contraseña del keystore
-  #  key-store-type: PKCS12              # Tipo de keystore
-
-# 🚨 Propiedad opcional para MySQL 8.x
-#spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
-# ❗ Si usas MySQL 8, descomentar para evitar problemas con el dialect
+  port: ${SERVER_PORT:8080}
 jwt:
-  secret: YTRjYWI0YmYtNTI0OS00MmExLTlkOWQtMzA3NDVhYjU3YjYzMWIwNWRhYjYtZWQwZi00NjAwLWI1NTgtMGZmNWZlMTUzZTYwY2Q4ZjliNmYtNmNmOC00M2ZiLTg3OTgtZTkzMDdmYmY4NDBj
-  expirationMs: 86000000
+  secret: ${JWT_SECRET:}
+  expiration-ms: ${JWT_EXPIRATION_MS:86000000}
+
+minerva:
+  bootstrap:
+    enabled: ${MINERVA_BOOTSTRAP_ENABLED:false}
+    admin:
+      dni: ${MINERVA_ADMIN_DNI:}
+      names: ${MINERVA_ADMIN_NAMES:}
+      last-names: ${MINERVA_ADMIN_LAST_NAMES:}
+      phone: ${MINERVA_ADMIN_PHONE:}
+      email: ${MINERVA_ADMIN_EMAIL:}
+      username: ${MINERVA_ADMIN_USERNAME:}
+      password: ${MINERVA_ADMIN_PASSWORD:}

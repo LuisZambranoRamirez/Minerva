@@ -1,26 +1,30 @@
 package com.minerva.application.service;
 
+import com.minerva.application.port.driven.CurrentUserProvider;
 import com.minerva.application.port.drivers.SupplierUseCase;
 import com.minerva.domain.valueObject.PhoneNumber;
 import com.minerva.domain.valueObject.RUC;
 import com.minerva.domain.constants.Permission;
-import com.minerva.domain.constants.Role;
 import com.minerva.domain.services.Result;
+import com.minerva.domain.entities.auditEvent.CollectionAuditTarget;
 import com.minerva.domain.entities.supplier.Supplier;
-import com.minerva.domain.valueObject.SupplierName;
-import com.minerva.domain.valueObject.id.UserName;
+import com.minerva.domain.entities.supplier.SupplierId;
+import com.minerva.domain.valueObject.id.SupplierIdImpl;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.repositories.SupplierRepository;
 import com.minerva.domain.repositories.UserRepository;
-
+import com.minerva.application.exceptions.UnauthorizedActionException;
+import com.minerva.application.exceptions.ResourceNotFoundException;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 public class SupplierService extends Service implements SupplierUseCase {
     private final SupplierRepository supplierRepository;
 
-    public SupplierService(Role userRole, UserName userName, UserRepository userRepository, SupplierRepository supplierRepository) {
-        super(userRole, userName, userRepository);
+    public SupplierService(UserRepository userRepository, CurrentUserProvider currentUserProvider, SupplierRepository supplierRepository) {
+        super(userRepository, currentUserProvider);
         this.supplierRepository = supplierRepository;
     }
 
@@ -38,7 +42,7 @@ public class SupplierService extends Service implements SupplierUseCase {
             return Result.fail(e.getMessage());
         }
 
-        if (supplierRepository.existsById(supplierCreated.getSupplierName()))
+        if (supplierRepository.existsBySupplierName(supplierCreated.getSupplierName()))
             return Result.fail("Ya existe un proveedor con el mismo nombre.");
 
         if (supplierCreated.getRuc().isPresent() && supplierRepository.existsByRuc(supplierCreated.getRuc().get()))
@@ -53,12 +57,12 @@ public class SupplierService extends Service implements SupplierUseCase {
     }
 
     @Override
-    public Result<Void> updatePhoneNumber(String supplierName, String phoneNumber) throws UnauthorizedActionException {
+    public Result<Void> updatePhoneNumber(String supplierId, String phoneNumber) throws UnauthorizedActionException {
         if (getUserRole().lacksPermission(Permission.SUPPLIER_UPDATE_PHONE_NUMBER)) 
             throw new UnauthorizedActionException("El usuario no tiene permiso para actualizar el número de teléfono del proveedor.");
 
-        Optional<Supplier> supplierOpt = findByPhone(phoneNumber);
-        if (supplierOpt.isEmpty()) return Result.fail("Proveedor no encontrado.");
+        Optional<Supplier> supplierOpt = findSupplierById(supplierId);
+        if (supplierOpt.isEmpty()) throw new ResourceNotFoundException("Proveedor no encontrado.");
 
         Supplier supplier = supplierOpt.get();
 
@@ -74,13 +78,13 @@ public class SupplierService extends Service implements SupplierUseCase {
     }
 
     @Override
-    public Result<Void> updateRuc(String supplierName, String ruc) throws UnauthorizedActionException {
+    public Result<Void> updateRuc(String supplierId, String ruc) throws UnauthorizedActionException {
 
         if (getUserRole().lacksPermission(Permission.SUPPLIER_UPDATE_RUC)) 
             throw new UnauthorizedActionException("El usuario no tiene permiso para actualizar el RUC del proveedor.");
 
-        Optional<Supplier> supplierOpt = findById(supplierName);
-        if (supplierOpt.isEmpty()) return Result.fail("Proveedor no encontrado.");
+        Optional<Supplier> supplierOpt = findSupplierById(supplierId);
+        if (supplierOpt.isEmpty()) throw new ResourceNotFoundException("Proveedor no encontrado.");
 
         Supplier supplier = supplierOpt.get();
 
@@ -102,20 +106,33 @@ public class SupplierService extends Service implements SupplierUseCase {
             throw new UnauthorizedActionException("El usuario no tiene permiso para buscar todos los proveedores.");
 
         List<Supplier> suppliers = supplierRepository.findAll();
-        registerUserAction(Permission.SUPPLIER_FIND_ALL, new AllId());
+        registerUserAction(
+                Permission.SUPPLIER_FIND_ALL,
+                new CollectionAuditTarget(CollectionAuditTarget.Resource.SUPPLIERS)
+        );
         return suppliers;
     }
 
     @Override
-    public Optional<Supplier> findById(String supplierName) throws UnauthorizedActionException {
+    public Optional<Supplier> findById(String supplierId) throws UnauthorizedActionException {
         if (getUserRole().lacksPermission(Permission.SUPPLIER_FIND_BY_ID)) 
             throw new UnauthorizedActionException("El usuario no tiene permiso para buscar proveedores por ID.");
         try {
-            SupplierName supplierNameObj = new SupplierName(supplierName);
-            registerUserAction(Permission.SUPPLIER_FIND_BY_ID, supplierNameObj);
-            return supplierRepository.findById(supplierNameObj);
+            return supplierRepository.findById(SupplierIdImpl.fromString(supplierId)).map(supplier -> {
+                registerUserAction(Permission.SUPPLIER_FIND_BY_ID, supplier.getId());
+                return supplier;
+            });
         } catch (DomainException e) {
-            return Optional.empty();
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+    }
+
+    private Optional<Supplier> findSupplierById(String supplierId) {
+        try {
+            SupplierId id = SupplierIdImpl.fromString(supplierId);
+            return supplierRepository.findById(id);
+        } catch (DomainException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
@@ -130,20 +147,20 @@ public class SupplierService extends Service implements SupplierUseCase {
             }                
             );
         } catch (DomainException e) {
-            return Optional.empty();
+            throw new IllegalArgumentException(e.getMessage(), e);
         }        
     }
 
     @Override
     public Optional<Supplier> findByPhone(String phoneNumber) throws UnauthorizedActionException {
-        if (getUserRole().lacksPermission(Permission.SUPPLIER_UPDATE_PHONE_NUMBER)) 
+        if (getUserRole().lacksPermission(Permission.SUPPLIER_FIND_BY_PHONE_NUMBER))
             throw new UnauthorizedActionException("El usuario no tiene permiso para buscar proveedores por teléfono.");
         try {
             Optional<Supplier> supplierOpt = supplierRepository.findByPhone(new PhoneNumber(phoneNumber));
-            supplierOpt.ifPresent(supplier -> registerUserAction(Permission.SUPPLIER_UPDATE_PHONE_NUMBER, supplier.getId()));
+            supplierOpt.ifPresent(supplier -> registerUserAction(Permission.SUPPLIER_FIND_BY_PHONE_NUMBER, supplier.getId()));
             return supplierOpt;
         } catch (DomainException e) {
-            return Optional.empty();
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 }
