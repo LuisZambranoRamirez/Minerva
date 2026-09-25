@@ -21,11 +21,15 @@ public class SaleEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "customer_id",
+            name = "id_customer",
             nullable = false,
             foreignKey = @ForeignKey(name = "fk_sale_customer")
     )
     private CustomerEntity customer;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_order_id", unique = true, foreignKey = @ForeignKey(name = "fk_sale_source_order"))
+    private OrderEntity sourceOrder;
 
     @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;

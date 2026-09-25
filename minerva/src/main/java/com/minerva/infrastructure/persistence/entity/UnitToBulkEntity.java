@@ -25,6 +25,7 @@ public class UnitToBulkEntity {
     @JoinColumn(
             name = "bulk_product_id",
             nullable = false,
+            unique = true,
             foreignKey = @ForeignKey(name = "fk_bulk_product")
     )
     private ProductEntity bulkProduct;

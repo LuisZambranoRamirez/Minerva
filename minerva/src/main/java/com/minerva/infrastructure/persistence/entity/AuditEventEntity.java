@@ -1,6 +1,7 @@
 package com.minerva.infrastructure.persistence.entity;
 
 import com.minerva.domain.constants.Permission;
+import com.minerva.domain.constants.AuditEventType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -32,6 +33,12 @@ public class AuditEventEntity {
     private AppUserEntity user;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "event_type", nullable = false)
+    private AuditEventType eventType;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "permission", nullable = false)
     private Permission permission;
 

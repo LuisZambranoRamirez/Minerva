@@ -30,11 +30,11 @@ public class StockEntryEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "id_supplier",
+            name = "id_stock_receipt",
             nullable = false,
-            foreignKey = @ForeignKey(name = "fk_stock_entry_supplier")
+            foreignKey = @ForeignKey(name = "fk_stock_entry_receipt")
     )
-    private SupplierEntity supplier;
+    private StockReceiptEntity stockReceipt;
 
     @Column(name = "unit_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitPrice;
@@ -45,6 +45,4 @@ public class StockEntryEntity {
     @Column(name = "expiration_date")
     private LocalDateTime expirationDate;
 
-    @Column(name = "registration_date", nullable = false)
-    private LocalDateTime registrationDate;
 }

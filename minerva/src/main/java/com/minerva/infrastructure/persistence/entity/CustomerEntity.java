@@ -27,4 +27,25 @@ public class CustomerEntity {
 
     @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
+
+    @Column(name = "business_name", length = 150)
+    private String businessName;
+
+    @Column(name = "legal_name", length = 150)
+    private String legalName;
+
+    @Column(name = "ruc", length = 11)
+    private String ruc;
+
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "default_delivery_address", length = 255)
+    private String defaultDeliveryAddress;
+
+    @Column(name = "default_delivery_contact", length = 150)
+    private String defaultDeliveryContact;
+
+    @Column(name = "default_delivery_phone", length = 20)
+    private String defaultDeliveryPhone;
 }

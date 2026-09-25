@@ -31,7 +31,7 @@ CREATE TYPE product_category AS ENUM (
     'SNACKS_GOLOSINAS',
     'CUIDADO_PERSONAL',
     'LIMPIEZA_HOGAR',
-    'BEBÉS',
+    'BEBES',
     'MASCOTAS',
     'OTROS'
 );
@@ -64,20 +64,24 @@ CREATE TYPE permission AS ENUM (
     'PRODUCT_REGISTER',
     'PRODUCT_REGISTER_STOCK_ENTRY',
     'PRODUCT_ASSOCIATE_UNIT_TO_BULK',
+    'PRODUCT_REGISTER_INVENTORY_LOSS',
 
     -- Product - Read
     'PRODUCT_FIND_BY_ID',
     'PRODUCT_FIND_BY_BAR_CODE',
     'PRODUCT_FIND_ALL',
+    'PRODUCT_FIND_INVENTORY_LOSSES',
 
     -- Sale - Write
     'SALE_REGISTER',
     'SALE_ADD_PAYMENT',
+    'SALE_REGISTER_PRODUCT_RETURN',
 
     -- Sale - Read
     'SALE_FIND_BY_ID',
     'SALE_FIND_BY_CUSTOMER_ID',
     'SALE_FIND_ALL',
+    'SALE_FIND_PRODUCT_RETURNS',
 
     -- Supplier - Write
     'SUPPLIER_REGISTER',
@@ -189,6 +193,7 @@ CREATE TABLE customer (
 
 CREATE TABLE product (
     product_id UUID PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
     sku VARCHAR(100) NOT NULL UNIQUE,
     product_name VARCHAR(100) NOT NULL UNIQUE,
     gain_strategy gain_strategy NOT NULL,
@@ -297,6 +302,8 @@ CREATE TABLE stock_loss (
     observation VARCHAR(255),
     registration_date TIMESTAMP NOT NULL,
 
+    CONSTRAINT chk_stock_loss_quantity_positive CHECK (quantity > 0),
+
     CONSTRAINT fk_stock_loss_product
         FOREIGN KEY (id_product)
         REFERENCES product(product_id)
@@ -324,6 +331,8 @@ CREATE TABLE product_return (
     quantity NUMERIC(10,3) NOT NULL,
     reason return_reason NOT NULL,
     registration_date TIMESTAMP NOT NULL,
+
+    CONSTRAINT chk_product_return_quantity_positive CHECK (quantity > 0),
 
     CONSTRAINT fk_product_return_sale_detail
         FOREIGN KEY (id_sale_detail)

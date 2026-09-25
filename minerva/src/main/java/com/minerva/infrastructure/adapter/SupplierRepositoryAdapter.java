@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.minerva.domain.entities.supplier.SupplierId;
 import com.minerva.domain.valueObject.PhoneNumber;
 import com.minerva.domain.valueObject.RUC;
+import com.minerva.domain.valueObject.SupplierName;
 import com.minerva.domain.repositories.SupplierRepository;
 import com.minerva.infrastructure.persistence.entity.SupplierEntity;
 import com.minerva.infrastructure.persistence.repository.JpaSupplierRepository;
@@ -27,17 +28,22 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
 
     @Override
     public boolean existsById(SupplierId id) {
-        return jpaSupplierRepository.existsById(id.value());
+        return jpaSupplierRepository.existsById(id.getIdValue());
+    }
+
+    @Override
+    public boolean existsBySupplierName(SupplierName supplierName) {
+        return jpaSupplierRepository.existsBySupplierName(supplierName.getValue());
     }
 
     @Override
     public boolean existsByRuc(RUC ruc) {
-        return jpaSupplierRepository.existsByRuc(ruc.value);
+        return jpaSupplierRepository.existsByRuc(ruc.getValue());
     }
 
     @Override
     public boolean existsByPhoneNumber(PhoneNumber phoneNumber) {
-        return jpaSupplierRepository.existsByPhoneNumber(phoneNumber.value);
+        return jpaSupplierRepository.existsByPhoneNumber(phoneNumber.getValue());
     }
 
     @Override
@@ -50,35 +56,37 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
 
     @Override
     public Optional<com.minerva.domain.entities.supplier.Supplier> findById(SupplierId id) {
-        return jpaSupplierRepository.findById(id.value())
+        return jpaSupplierRepository.findById(id.getIdValue())
                 .map(this::toDomain);
     }
     
 
     @Override
     public Optional<com.minerva.domain.entities.supplier.Supplier> findByRuc(RUC ruc) {
-        return jpaSupplierRepository.findByRuc(ruc.value)
+        return jpaSupplierRepository.findByRuc(ruc.getValue())
                 .map(this::toDomain);
     }
 
     @Override
     public Optional<com.minerva.domain.entities.supplier.Supplier> findByPhone(PhoneNumber phoneNumber) {
-        return jpaSupplierRepository.findByPhoneNumber(phoneNumber.value)
+        return jpaSupplierRepository.findByPhoneNumber(phoneNumber.getValue())
                 .map(this::toDomain);
     }
 
     private SupplierEntity toEntity(com.minerva.domain.entities.supplier.Supplier supplier) {
         return new SupplierEntity(
-                supplier.getSupplierName().value,
-                supplier.getRuc().map(r -> r.value).orElse(null),
-                supplier.getPhoneNumber().map(p -> p.value).orElse(null),
+                supplier.getId().getIdValue(),
+                supplier.getSupplierName().getValue(),
+                supplier.getRuc().map(RUC::getValue).orElse(null),
+                supplier.getPhoneNumber().map(PhoneNumber::getValue).orElse(null),
                 supplier.getRegistrationDate()
         );
     }
 
     private com.minerva.domain.entities.supplier.Supplier toDomain(SupplierEntity entity) {
         return new com.minerva.domain.entities.supplier.Supplier(
-                entity.getSupplierNameId(),
+                entity.getSupplierId(),
+                entity.getSupplierName(),
                 entity.getRuc(),
                 entity.getPhoneNumber(),
                 entity.getRegistrationDate()

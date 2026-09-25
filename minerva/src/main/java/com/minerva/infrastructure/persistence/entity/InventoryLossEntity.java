@@ -3,13 +3,15 @@ package com.minerva.infrastructure.persistence.entity;
 import com.minerva.domain.constants.InventoryLossReason;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "inventory_loss")
+@Table(name = "stock_loss")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,14 +20,14 @@ import java.util.UUID;
 public class InventoryLossEntity {
 
     @Id
-    @Column(name = "inventory_loss_id")
+    @Column(name = "stock_loss_id")
     private UUID inventoryLossId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "id_product",
             nullable = false,
-            foreignKey = @ForeignKey(name = "fk_inventory_loss_product")
+            foreignKey = @ForeignKey(name = "fk_stock_loss_product")
     )
     private ProductEntity product;
 
@@ -33,6 +35,7 @@ public class InventoryLossEntity {
     private BigDecimal quantity;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "reason", nullable = false)
     private InventoryLossReason reason;
 

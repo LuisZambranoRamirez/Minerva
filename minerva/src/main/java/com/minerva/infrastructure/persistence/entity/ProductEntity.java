@@ -5,6 +5,8 @@ import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.SaleType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,6 +25,10 @@ public class ProductEntity {
     @Column(name = "product_id")
     private UUID productId;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @Column(name = "sku", length = 100, nullable = false, unique = true)
     private String sku;
 
@@ -30,6 +36,7 @@ public class ProductEntity {
     private String productName;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "gain_strategy", nullable = false)
     private GainStrategy gainStrategy;
 
@@ -39,6 +46,9 @@ public class ProductEntity {
     @Column(name = "stock", precision = 10, scale = 3, nullable = false)
     private BigDecimal stock;
 
+    @Column(name = "cost", precision = 10, scale = 2, nullable = false)
+    private BigDecimal cost;
+
     @Column(name = "reorder_level", precision = 10, scale = 3)
     private BigDecimal reorderLevel;
 
@@ -46,10 +56,12 @@ public class ProductEntity {
     private String barCode;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "sale_type", nullable = false)
     private SaleType saleType;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "category", nullable = false)
     private ProductCategory category;
 

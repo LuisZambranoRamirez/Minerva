@@ -2,15 +2,22 @@ package com.minerva.infrastructure.persistence.repository;
 
 import com.minerva.infrastructure.persistence.entity.SaleDetailEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface JpaSaleDetailRepository extends JpaRepository<SaleDetailEntity, UUID> {
 
-    List<SaleDetailEntity> findBySaleEntity_SaleId(String saleId);
+    List<SaleDetailEntity> findBySale_SaleId(UUID saleId);
 
-    List<SaleDetailEntity> findByProductEntity_ProductNameId(String productNameId);
+    List<SaleDetailEntity> findByProduct_ProductId(UUID productId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select detail from SaleDetailEntity detail join fetch detail.product where detail.saleDetailId = :id")
+    Optional<SaleDetailEntity> findByIdForProductReturn(@Param("id") UUID id);
 }

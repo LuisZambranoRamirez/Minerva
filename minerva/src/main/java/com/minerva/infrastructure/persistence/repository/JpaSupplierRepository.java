@@ -6,12 +6,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-@Repository
 public interface JpaSupplierRepository extends JpaRepository<SupplierEntity, UUID> {
     Optional<SupplierEntity> findByRuc(String ruc);
     Optional<SupplierEntity> findByPhoneNumber(String phoneNumber);
     boolean existsByRuc(String ruc);
     boolean existsByPhoneNumber(String phoneNumber);
+    boolean existsBySupplierName(String supplierName);
 }

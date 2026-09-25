@@ -2,15 +2,16 @@ package com.minerva.infrastructure.persistence.repository;
 
 import com.minerva.infrastructure.persistence.entity.UnitToBulkEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-@Repository
 public interface JpaUnitToBulkRepository extends JpaRepository<UnitToBulkEntity, UnitToBulkEntity.UnitToBulkId> {
 
-    Optional<UnitToBulkEntity> findByBulkProductEntity_ProductNameId(String bulkProductNameId);
+    Optional<UnitToBulkEntity> findByBulkProduct_ProductId(UUID bulkProductId);
 
-    List<UnitToBulkEntity> findByUnitProductEntity_ProductNameId(String unitProductNameId);
+    List<UnitToBulkEntity> findByUnitProduct_ProductId(UUID unitProductId);
+
+    boolean existsByBulkProduct_ProductId(UUID bulkProductId);
 }

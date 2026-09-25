@@ -13,10 +13,10 @@ public class PasswordHasherAdapter implements PasswordHasher {
 
     @Override
     public PasswordHash hash(Password rawPassword) {
-        if (rawPassword == null || rawPassword.value.isBlank()) {
+        if (rawPassword == null || rawPassword.getValue().isBlank()) {
             throw new IllegalArgumentException("Password cannot be null or empty");
         }
-        String hashed = passwordEncoder.encode(rawPassword.value);
+        String hashed = passwordEncoder.encode(rawPassword.getValue());
         try {
             return new PasswordHash(hashed);
         } catch (DomainException e) {
@@ -26,6 +26,10 @@ public class PasswordHasherAdapter implements PasswordHasher {
 
     @Override
     public boolean matches(String password, PasswordHash hashedPassword) {
-        return passwordEncoder.matches(password, hashedPassword.value);
+        if (password == null || hashedPassword == null) {
+            return false;
+        }
+
+        return passwordEncoder.matches(password, hashedPassword.getValue());
     }
 }
