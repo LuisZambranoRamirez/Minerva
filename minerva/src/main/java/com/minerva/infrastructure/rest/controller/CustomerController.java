@@ -1,7 +1,10 @@
 package com.minerva.infrastructure.rest.controller;
 
-import com.minerva.application.service.CustomerService;
+import com.minerva.application.port.drivers.CustomerUseCase;
+import com.minerva.domain.entities.customer.Customer;
 import com.minerva.domain.services.Result;
+import com.minerva.infrastructure.rest.exception.BadRequestException;
+import com.minerva.application.exceptions.ResourceNotFoundException;
 
 import jakarta.validation.Valid;
 
@@ -17,9 +20,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/customers")
 public class CustomerController {
 
-    private final CustomerService customerService;
+    private final CustomerUseCase customerService;
 
-    public CustomerController(CustomerService customerService) {
+    public CustomerController(CustomerUseCase customerService) {
         this.customerService = customerService;
     }
 
@@ -29,12 +32,12 @@ public class CustomerController {
             @Valid @RequestBody RegisterCustomerRequest request) {
 
         Result<Void> result = customerService.registerCustomer(
-                request.customerName(),
+                request.fullName(),
                 request.phoneNumber()
         );
 
         if (result.isFail()) {
-            return ResponseEntity.badRequest().body(result.getMessage());
+            throw new BadRequestException(result.getMessage());
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -51,7 +54,7 @@ public class CustomerController {
         );
 
         if (result.isFail()) {
-            return ResponseEntity.badRequest().body(result.getMessage());
+            throw new BadRequestException(result.getMessage());
         }
 
         return ResponseEntity.ok().build();
@@ -61,18 +64,9 @@ public class CustomerController {
 
     @GetMapping("/{customerId}")
     public ResponseEntity<?> findById(@PathVariable String customerId) {
-
         return customerService.findCustomerById(customerId)
-                .map(customer -> ResponseEntity.ok(
-                        new CustomerResponse(
-                            customer.getCustomerName().value,
-                            customer.getPhoneNumber()
-                                    .map(phone -> phone.value)
-                                    .orElse(null),
-                            customer.getRegistrationDate().toString()
-                        )
-                ))
-                .orElse(ResponseEntity.notFound().build());
+                .map(customer -> ResponseEntity.ok(toResponse(customer)))
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado."));
     }
 
     @GetMapping
@@ -81,13 +75,7 @@ public class CustomerController {
         List<CustomerResponse> customers =
                 customerService.getAllCustomers()
                         .stream()
-                        .map(customer -> new CustomerResponse(
-                                customer.getCustomerName().value,
-                                customer.getPhoneNumber()
-                                        .map(phone -> phone.value)
-                                        .orElse(null),
-                                customer.getRegistrationDate().toString()
-                        ))
+                        .map(this::toResponse)
                         .collect(Collectors.toList());
 
         return ResponseEntity.ok(customers);
@@ -95,25 +83,27 @@ public class CustomerController {
 
     @GetMapping("/search")
     public ResponseEntity<?> findByPhoneNumber(@RequestParam String phoneNumber) {
-
         return customerService.findCustomerByPhoneNumber(phoneNumber)
-                .map(customer -> ResponseEntity.ok(
-                        new CustomerResponse(
-                                customer.getCustomerName().value,
-                                customer.getPhoneNumber()
-                                        .map(phone -> phone.value)
-                                        .orElse(null),
-                                customer.getRegistrationDate().toString()
-                        )
-                ))
-                .orElse(ResponseEntity.notFound().build());
+                .map(customer -> ResponseEntity.ok(toResponse(customer)))
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado."));
+    }
+
+    private CustomerResponse toResponse(Customer customer) {
+        return new CustomerResponse(
+                customer.getId().getIdValueAsString(),
+                customer.getFullName().getValue(),
+                customer.getPhoneNumber()
+                        .map(phone -> phone.getValue())
+                        .orElse(null),
+                customer.getRegistrationDate().toString()
+        );
     }
 
     // --------------------- DTOs ---------------------
 
     public record RegisterCustomerRequest(
         @NotBlank(message = "El nombre es obligatorio")
-        String customerName,
+        String fullName,
 
         String phoneNumber
 
@@ -125,7 +115,8 @@ public class CustomerController {
     ) {}
 
     public record CustomerResponse(
-        String customerName,
+        String customerId,
+        String fullName,
         String phoneNumber,
         String registrationDate
     ) {
