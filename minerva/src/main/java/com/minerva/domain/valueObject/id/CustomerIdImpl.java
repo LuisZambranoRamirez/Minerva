@@ -6,6 +6,7 @@ import com.minerva.domain.entities.customer.CustomerId;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.ValueObject;
+import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 
 import java.util.Set;
 import java.util.UUID;
@@ -57,5 +58,22 @@ public final class CustomerIdImpl extends ValueObject<UUID> implements CustomerI
         return Set.of(
                 new StringAttribute(getAuditSubjectId())
         );
+    }
+
+    //revisa si es valodio el id del cliente el customerIdimpl
+    public static CustomerIdImpl fromString(String value) throws InvalidDomainArgumentException {
+
+        if (value == null || value.isBlank()) {
+            throw new InvalidDomainArgumentException(
+                    "El ID del cliente no puede estar vacío.");
+        }
+
+        try {
+            return new CustomerIdImpl(UUID.fromString(value));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidDomainArgumentException(
+                    "El ID del cliente no tiene un formato UUID válido.",
+                    e);
+        }
     }
 }

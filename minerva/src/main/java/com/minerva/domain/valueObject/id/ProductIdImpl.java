@@ -4,6 +4,7 @@ import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.product.ProductId;
 import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.exceptions.NullValueException;
+import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.ValueObject;
 
@@ -13,8 +14,12 @@ import java.util.UUID;
 public final class ProductIdImpl extends ValueObject<UUID> implements ProductId {
 
     public ProductIdImpl(UUID value) throws NullValueException {
+        super(requireValue(value));
+    }
+
+    private static UUID requireValue(UUID value) throws NullValueException {
         if (value == null) throw new NullValueException("El productId no puede ser nulo");
-        super(value);
+        return value;
     }
 
     public static ProductIdImpl generate() {
@@ -25,6 +30,18 @@ public final class ProductIdImpl extends ValueObject<UUID> implements ProductId 
                     "Error al generar el ID de product: " + e.getMessage(),
                     e
             );
+        }
+    }
+
+    public static ProductIdImpl fromString(String value) throws InvalidDomainArgumentException {
+        if (value == null || value.isBlank()) {
+            throw new InvalidDomainArgumentException("El ID del producto no puede estar vacío.");
+        }
+
+        try {
+            return new ProductIdImpl(UUID.fromString(value));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidDomainArgumentException("El ID del producto no tiene un formato UUID válido.", e);
         }
     }
 

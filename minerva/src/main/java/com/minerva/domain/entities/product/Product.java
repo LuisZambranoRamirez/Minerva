@@ -1,52 +1,50 @@
 package com.minerva.domain.entities.product;
 
+import com.minerva.domain.constants.GainStrategy;
 import com.minerva.domain.constants.Modifier;
 import com.minerva.domain.constants.ProductCategory;
-import com.minerva.domain.constants.GainStrategy;
 import com.minerva.domain.constants.SaleType;
+import com.minerva.domain.entities.Entity;
 import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.entities.auditEvent.NumericAttribute;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
-import com.minerva.domain.services.Result;
-import com.minerva.domain.entities.Entity;
 import com.minerva.domain.entities.sale.ProductSale;
-import com.minerva.domain.exceptions.*;
-import com.minerva.domain.valueObject.*;
+import com.minerva.domain.exceptions.DomainException;
+import com.minerva.domain.exceptions.EntityRestoreException;
+import com.minerva.domain.exceptions.NullValueException;
+import com.minerva.domain.exceptions.UnexpectedDomainException;
+import com.minerva.domain.services.Result;
+import com.minerva.domain.valueObject.BarCode;
+import com.minerva.domain.valueObject.Markup;
+import com.minerva.domain.valueObject.Money;
+import com.minerva.domain.valueObject.ProductName;
+import com.minerva.domain.valueObject.ProductQuantity;
+import com.minerva.domain.valueObject.ProductStock;
+import com.minerva.domain.valueObject.SKU;
+import com.minerva.domain.valueObject.id.Id;
 import com.minerva.domain.valueObject.id.ProductIdImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class Product extends Entity<ProductId> implements ProductSale {
+
     private final SKU sku;
     private final ProductName productName;
-    private Markup markup;
+    private final Markup markup;
     private final ProductStock productStock;
-    //Puede ser null
     private final BarCode barCode;
-    //----------------------------------------------
     private Money cost;
     private final ProductCategory productCategory;
     private final LocalDateTime registrationDate;
 
-    // TABLAS
     private final Map<Modifier, Money> modifiers = new HashMap<>();
     private final Map<Product, ProductQuantity> bulkProducts = new HashMap<>();
-    // -------------------------
-
-    public Result<Void> addModifier(Modifier modifier, Money price) {
-        if (modifier == null) return Result.fail("El modificador no puede ser nulo.");
-        if (price == null) return Result.fail("El precio del modificador no puede ser nulo.");
-
-        modifiers.put(modifier, price);
-        return Result.success(null);
-    }
-
-    @Override
-    public Optional<Money> getModifierPrice(Modifier modifier) {
-        return Optional.ofNullable(modifiers.get(modifier));
-    }
 
     public Product(
             String sku,
@@ -60,23 +58,24 @@ public class Product extends Entity<ProductId> implements ProductSale {
             ProductCategory productCategory,
             BigDecimal purchasePrice
     ) throws DomainException {
-
         super(ProductIdImpl.generate());
+
+        if (productCategory == null) {
+            throw new NullValueException("Seleccione una categoría.");
+        }
+
         this.sku = new SKU(sku);
         this.productName = new ProductName(productName);
-        this.productStock = new ProductStock(saleType, new ProductQuantity(initialStock), new ProductQuantity(reorderLevel));
+        this.productStock = new ProductStock(
+                saleType,
+                new ProductQuantity(initialStock),
+                reorderLevel == null ? null : new ProductQuantity(reorderLevel)
+        );
         this.markup = new Markup(gainAmount, gainStrategy);
         this.productCategory = productCategory;
         this.cost = new Money(purchasePrice);
         this.registrationDate = LocalDateTime.now();
-
-        if (barCode == null) {
-            if (SaleType.UNIDAD.equals(saleType))
-                throw new DomainException("Ingrese el código de barras para productos vendidos por unidad.");
-            this.barCode = null;
-        } else {
-            this.barCode = new BarCode(barCode);
-        }
+        this.barCode = createBarCode(barCode, saleType);
     }
 
     public Product(
@@ -94,91 +93,80 @@ public class Product extends Entity<ProductId> implements ProductSale {
             LocalDateTime registrationDate
     ) {
         super(productId);
+
         try {
+            if (productCategory == null || registrationDate == null) {
+                throw new NullValueException("Los datos persistidos del producto están incompletos.");
+            }
+
             this.sku = sku;
             this.productName = productName;
-            this.stock = stock;
+            this.productStock = new ProductStock(
+                    saleType,
+                    stock,
+                    reorderLevel == null ? null : new ProductQuantity(reorderLevel)
+            );
             this.markup = new Markup(gainAmount, gainStrategy);
-            this.saleType = saleType;
+            this.barCode = createBarCode(barCode, saleType);
             this.productCategory = productCategory;
-            this.reorderLevel = reorderLevel == null ? null : new ProductQuantity(reorderLevel);
-            this.barCode = barCode == null ? null : new BarCode(barCode);
             this.cost = cost;
             this.registrationDate = registrationDate;
-        } catch (InvalidDomainArgumentException e) {
-            throw new EntityRestoreException("Error al crear el producto: " + e.getMessage(), e);
+        } catch (DomainException e) {
+            throw new EntityRestoreException("Error al restaurar el producto: " + e.getMessage(), e);
         }
     }
 
-    // --------------------------------
+    private BarCode createBarCode(String value, SaleType saleType) throws DomainException {
+        if (value == null || value.isBlank()) {
+            if (SaleType.UNIDAD.equals(saleType)) {
+                throw new DomainException("Ingrese el código de barras para productos vendidos por unidad.");
+            }
+            return null;
+        }
+
+        return new BarCode(value);
+    }
+
+    public Result<Void> addModifier(Modifier modifier, Money price) {
+        if (modifier == null) return Result.fail("El modificador no puede ser nulo.");
+        if (price == null) return Result.fail("El precio del modificador no puede ser nulo.");
+        modifiers.put(modifier, price);
+        return Result.success(null);
+    }
+
+    public Optional<Money> getModifierPrice(Modifier modifier) {
+        return Optional.ofNullable(modifiers.get(modifier));
+    }
 
     public Result<Void> processDeliveryFromSupplier(StockEntryProduct stockEntryProduct) {
         if (stockEntryProduct == null) return Result.fail("La entrada de stock no puede ser nula.");
         if (!getId().equals(stockEntryProduct.getProductId())) return Result.fail("La entrada de stock no corresponde a este producto.");
-        return increaseStock(stockEntryProduct.getQuantity());
+        return productStock.increase(stockEntryProduct.getQuantity());
     }
 
-    public Result<Void> processSale(SaleProduct saleProduct) {
-        if (saleProduct == null) return Result.fail("La venta del producto no puede ser nula");
-
-        Optional<ProductQuantity> soldQuantity = saleProduct.getSoldQuantity(this.getId());
-        if (soldQuantity.isEmpty()) return Result.fail("El producto no existe en la venta");
-        return decreaseStock(soldQuantity.get());
+    public Result<Void> processSale(ProductSale productSale) {
+        if (productSale == null) return Result.fail("La venta del producto no puede ser nula.");
+        return Result.fail("La cantidad vendida debe ser proporcionada por el detalle de venta.");
     }
 
-    //----------------------------------
-
-    private Result<Void> increaseStock(ProductQuantity quantityToAdd) {
-        ProductQuantity newStockValue = this.stock.add(quantityToAdd);
-        return updateStock(newStockValue);
+    public Result<Void> decreaseStock(ProductQuantity quantity) {
+        return productStock.decrease(quantity);
     }
 
-    private Result<Void> decreaseStock(ProductQuantity quantityToSubtract) {
-        if (quantityToSubtract == null) return Result.fail("La cantidad a descontar no puede ser nula.");
-        if (this.stock.isZero()) return Result.fail("No hay stock disponible para este producto.");
-
-        try {
-            ProductQuantity newStockValue = this.stock.subtract(quantityToSubtract);
-            if (newStockValue.isLessThanZero())
-                return Result.fail(
-                    "No hay suficiente stock para realizar la operación. " +
-                    "Stock disponible: " + this.stock.getValue() +
-                    ". Cantidad solicitada: " + quantityToSubtract.getValue() + "."
-                );
-            return updateStock(newStockValue);
-        } catch (MinimumAmountException e) {
-            return Result.fail(e.getMessage());
-        }
+    public Result<Void> increaseStock(ProductQuantity quantity) {
+        return productStock.increase(quantity);
     }
 
-    private Result<Void> updateStock(ProductQuantity newStockValue) {
-        if (newStockValue == null)
-            return Result.fail("El nuevo valor de stock no puede ser nulo.");
-
-        if (SaleType.UNIDAD.equals(saleType) && newStockValue.isDecimal())
-            return Result.fail("Este producto se maneja por unidades. Ingrese una cantidad entera.");
-  
-        this.stock = newStockValue;
-        return Result.success(null);  
-    }
-
-    // -----------------------------------------------------
     public Result<Void> addBulkAssociation(Product bulkProduct, ProductQuantity quantity) {
         if (bulkProduct == null) return Result.fail("El producto a granel no puede ser nulo.");
-        if (quantity == null) return Result.fail("La cantidad no puede estar vacío");
-
-        if (this.equals(bulkProduct)) return Result.fail("No es posible asociar un producto consigo mismo.");
-        if (saleType != SaleType.UNIDAD ) return Result.fail("El producto -- " + getProductName() + " -- se vende por unidad y no permite asociar otro producto.");
-
-        if (bulkProduct.getSaleType() != SaleType.GRANEL) return Result.fail("El producto -- " + bulkProduct.getProductName() + " -- debe venderse a granel para poder ser asociado.");
-        if (quantity.isZeroOrLess()) return Result.fail("La cantidad debe ser mayor a cero");
+        if (quantity == null || quantity.isZeroOrLess()) return Result.fail("La cantidad debe ser mayor a cero.");
+        if (equals(bulkProduct)) return Result.fail("No es posible asociar un producto consigo mismo.");
+        if (getSaleType() != SaleType.UNIDAD) return Result.fail("El producto de origen debe venderse por unidad.");
+        if (bulkProduct.getSaleType() != SaleType.GRANEL) return Result.fail("El producto asociado debe venderse a granel.");
 
         bulkProducts.put(bulkProduct, quantity);
         return Result.success(null);
     }
-
-    // ---------------------------------------------
-
 
     public SKU getSku() {
         return sku;
@@ -197,11 +185,11 @@ public class Product extends Entity<ProductId> implements ProductSale {
     }
 
     public ProductQuantity getStock() {
-        return ProductStock;
+        return productStock.getQuantity();
     }
 
     public Optional<ProductQuantity> getReorderLevel() {
-        return Optional.ofNullable(reorderLevel);
+        return productStock.getReorderLevel();
     }
 
     public GainStrategy getGainStrategy() {
@@ -209,7 +197,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
     }
 
     public SaleType getSaleType() {
-        return saleType;
+        return productStock.getSaleType();
     }
 
     public ProductCategory getCategory() {
@@ -228,7 +216,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
     public Money calculatePrice() {
         try {
             return markup.apply(cost);
-        } catch (InvalidDomainArgumentException e) {
+        } catch (DomainException e) {
             throw new UnexpectedDomainException(e.getMessage(), e);
         }
     }
@@ -238,23 +226,22 @@ public class Product extends Entity<ProductId> implements ProductSale {
         return calculatePrice();
     }
 
-    // falta el sku
     @Override
     public Set<Attribute<?>> getAuditData() {
-        return Set.of(
-                new StringAttribute(getId()),
-                new StringAttribute(sku),
-                new StringAttribute(productName),
-                new NumericAttribute("stock", ProductStock),
-                new StringAttribute(getGainStrategy()),
-                new NumericAttribute("gainAmount", getGainAmount()),
-                new NumericAttribute("reorderLevel", reorderLevel),
-                new StringAttribute(barCode),
-                new StringAttribute(saleType),
-                new NumericAttribute("cost", cost),
-                new NumericAttribute("price", calculatePrice()),
-                new StringAttribute(productCategory),
-                new StringAttribute("registrationDate", registrationDate)
-        );
+        Set<Attribute<?>> attributes = new HashSet<>();
+        attributes.add(new StringAttribute((Id<?>) getId()));
+        attributes.add(new StringAttribute(sku));
+        attributes.add(new StringAttribute(productName));
+        attributes.add(new NumericAttribute("stock", getStock()));
+        attributes.add(new StringAttribute(getGainStrategy()));
+        attributes.add(new NumericAttribute("gainAmount", getGainAmount()));
+        getReorderLevel().ifPresent(value -> attributes.add(new NumericAttribute("reorderLevel", value)));
+        getBarCode().ifPresent(value -> attributes.add(new StringAttribute(value)));
+        attributes.add(new StringAttribute(getSaleType()));
+        attributes.add(new NumericAttribute("cost", cost));
+        attributes.add(new NumericAttribute("price", calculatePrice()));
+        attributes.add(new StringAttribute(productCategory));
+        attributes.add(new StringAttribute("registrationDate", registrationDate));
+        return Set.copyOf(attributes);
     }
 }

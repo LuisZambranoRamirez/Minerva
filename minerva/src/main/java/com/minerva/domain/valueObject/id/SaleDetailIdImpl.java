@@ -27,6 +27,15 @@ public final class SaleDetailIdImpl extends ValueObject<UUID> implements SaleDet
         }
     }
 
+    public static SaleDetailIdImpl fromString(String value) throws NullValueException {
+        if (value == null || value.isBlank()) throw new NullValueException("El ID del detalle de venta no puede estar vacío.");
+        try {
+            return new SaleDetailIdImpl(UUID.fromString(value));
+        } catch (IllegalArgumentException exception) {
+            throw new NullValueException("El ID del detalle de venta no tiene un formato UUID válido.");
+        }
+    }
+
     @Override
     public UUID getIdValue() {
         return getValue();

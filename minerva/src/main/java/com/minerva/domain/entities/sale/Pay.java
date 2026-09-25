@@ -20,10 +20,11 @@ class Pay extends Entity<PayId> {
     private static final Money MIN_AMOUNT = Money.tenCents();
 
     Pay(Money amount, PaymentMethod paymentMethod) throws DomainException {
-        if (paymentMethod == null) throw new NullValueException("El método de pago no puede estar vacío.");
-        if (amount != null && amount.isLessThan(MIN_AMOUNT)) throw new MinimumAmountException("El MONTO debe ser mayor o igual a S/" + MIN_AMOUNT);
-
         super(PayIdImpl.generate());
+
+        if (paymentMethod == null) throw new NullValueException("El método de pago no puede estar vacío.");
+        if (amount == null) throw new NullValueException("El monto no puede estar vacío.");
+        if (amount.isLessThan(MIN_AMOUNT)) throw new MinimumAmountException("El MONTO debe ser mayor o igual a S/" + MIN_AMOUNT.getValue());
         this.amount = amount;
         this.paymentMethod = paymentMethod;
         this.registrationDate = LocalDateTime.now();

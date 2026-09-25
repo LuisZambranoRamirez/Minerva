@@ -8,95 +8,75 @@ import com.minerva.domain.services.Result;
 
 import java.util.Optional;
 
-public class ProductStock extends ValueObject<ProductStock.Value> {
+/**
+ * Encapsula el stock y sus invariantes según el tipo de venta del producto.
+ */
+public final class ProductStock {
 
-    public record Value(
-            SaleType saleType,
-            ProductQuantity quantity,
-            //Puede ser null
-            ProductQuantity reorderLevel
-            // -----------------------------------
-    ) {}
+    private final SaleType saleType;
+    private ProductQuantity quantity;
+    private final ProductQuantity reorderLevel;
 
-    public ProductStock(SaleType saleType, ProductQuantity stock, ProductQuantity reorderLevel) throws DomainException {
-        if (saleType == null)
+    public ProductStock(SaleType saleType, ProductQuantity quantity, ProductQuantity reorderLevel) throws DomainException {
+        if (saleType == null) {
             throw new NullValueException("Seleccione el tipo de venta.");
-
-        super(new Value(saleType, stock, reorderLevel));
+        }
+        if (quantity == null) {
+            throw new NullValueException("El stock no puede ser nulo.");
+        }
+        if (SaleType.UNIDAD.equals(saleType) && quantity.isDecimal()) {
+            throw new DomainException("El stock no puede ser decimal para productos vendidos por unidad.");
+        }
+        if (reorderLevel != null && SaleType.UNIDAD.equals(saleType) && reorderLevel.isDecimal()) {
+            throw new DomainException("El nivel de reposición no puede ser decimal para productos vendidos por unidad.");
+        }
 
         this.saleType = saleType;
-        this.quantity = validateQuantity(stock, "El stock");
-        this.reorderLevel = reorderLevel == null ? null : validateQuantity(reorderLevel, "El nivel de reposición");
-
-        if (reorderLevel != null) {
-            this.reorderLevel = new ProductQuantity(reorderLevel);
-            if (SaleType.UNIDAD.equals(saleType) && this.reorderLevel.isDecimal())
-                throw new DomainException("El nivel de reposición no puede ser decimal para productos vendidos por unidad.");
-        }
+        this.quantity = quantity;
+        this.reorderLevel = reorderLevel;
     }
 
-    public Result<Void> increaseStock(ProductQuantity quantity) {
-        ProductQuantity newStock = quantity.add(quantity);
-        return updateStock(newStock);
-    }
-
-    private Result<Void> updateStock(ProductQuantity newStock) {
-        if (saleType == SaleType.UNIDAD && newStock.isDecimal()) {
-            return Result.fail(
-                    "Este producto se maneja por unidades. " +
-                            "Ingrese una cantidad entera."
-            );
+    public Result<Void> increase(ProductQuantity quantityToAdd) {
+        if (quantityToAdd == null || quantityToAdd.isZeroOrLess()) {
+            return Result.fail("La cantidad a agregar debe ser mayor a cero.");
         }
 
-        this.quantity = newStock;
-        return Result.success(null);
+        return update(quantity.add(quantityToAdd));
     }
 
-    private Result<Void> updateStock(ProductQuantity newStockValue) {
-        if (newStockValue == null)
-            return Result.fail("El nuevo valor de stock no puede ser nulo.");
-
-        if (SaleType.UNIDAD.equals(saleType) && newStockValue.isDecimal())
-            return Result.fail("Este producto se maneja por unidades. Ingrese una cantidad entera.");
-
-        this.stock = newStockValue;
-        return Result.success(null);
-    }
-
-
-
-    private Result<Void> increaseStock(ProductQuantity quantityToAdd) {
-        ProductQuantity newStockValue = this.stock.add(quantityToAdd);
-        return updateStock(newStockValue);
-    }
-
-    private Result<Void> decreaseStock(ProductQuantity quantityToSubtract) {
-        if (quantityToSubtract == null) return Result.fail("La cantidad a descontar no puede ser nula.");
-        if (this.stock.isZero()) return Result.fail("No hay stock disponible para este producto.");
+    public Result<Void> decrease(ProductQuantity quantityToSubtract) {
+        if (quantityToSubtract == null || quantityToSubtract.isZeroOrLess()) {
+            return Result.fail("La cantidad a descontar debe ser mayor a cero.");
+        }
+        if (quantity.isZero()) {
+            return Result.fail("No hay stock disponible para este producto.");
+        }
 
         try {
-            ProductQuantity newStockValue = this.stock.subtract(quantityToSubtract);
-            if (newStockValue.isLessThanZero())
-                return Result.fail(
-                        "No hay suficiente stock para realizar la operación. " +
-                                "Stock disponible: " + this.stock.getValue() +
-                                ". Cantidad solicitada: " + quantityToSubtract.getValue() + "."
-                );
-            return updateStock(newStockValue);
+            return update(quantity.subtract(quantityToSubtract));
         } catch (MinimumAmountException e) {
-            return Result.fail(e.getMessage());
+            return Result.fail("No hay suficiente stock para realizar la operación.");
         }
     }
 
-    public ProductQuantity getStock() {
-        return getValue().quantity;
+    private Result<Void> update(ProductQuantity newQuantity) {
+        if (SaleType.UNIDAD.equals(saleType) && newQuantity.isDecimal()) {
+            return Result.fail("Este producto se maneja por unidades. Ingrese una cantidad entera.");
+        }
+
+        quantity = newQuantity;
+        return Result.success(null);
+    }
+
+    public ProductQuantity getQuantity() {
+        return quantity;
     }
 
     public Optional<ProductQuantity> getReorderLevel() {
-        return Optional.ofNullable(getValue().reorderLevel);
+        return Optional.ofNullable(reorderLevel);
     }
 
     public SaleType getSaleType() {
-        return getValue().saleType;
+        return saleType;
     }
 }

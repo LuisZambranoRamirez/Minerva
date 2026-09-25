@@ -6,14 +6,29 @@ import java.util.UUID;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.product.InventoryLossId;
 import com.minerva.domain.entities.auditEvent.Attribute;
+import com.minerva.domain.exceptions.InvalidDomainArgumentException;
 import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.ValueObject;
 
 public final class InventoryLossIdImpl extends ValueObject<UUID> implements InventoryLossId {
 
-    private InventoryLossIdImpl(UUID value) throws NullValueException {
+    public InventoryLossIdImpl(UUID value) throws NullValueException {
         super(value);
+    }
+
+    public static InventoryLossIdImpl fromString(String value) throws InvalidDomainArgumentException {
+        if (value == null || value.isBlank()) {
+            throw new InvalidDomainArgumentException("El ID de la pérdida de inventario no puede estar vacío.");
+        }
+
+        try {
+            return new InventoryLossIdImpl(UUID.fromString(value));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidDomainArgumentException(
+                    "El ID de la pérdida de inventario no tiene un formato UUID válido.", e
+            );
+        }
     }
 
     public static InventoryLossIdImpl generate() {

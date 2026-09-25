@@ -27,6 +27,15 @@ public final class ProductReturnIdImpl extends ValueObject<UUID> implements Prod
         }
     }
 
+    public static ProductReturnIdImpl fromString(String value) throws NullValueException {
+        if (value == null || value.isBlank()) throw new NullValueException("El ID de la devolución no puede estar vacío.");
+        try {
+            return new ProductReturnIdImpl(UUID.fromString(value));
+        } catch (IllegalArgumentException exception) {
+            throw new NullValueException("El ID de la devolución no tiene un formato UUID válido.");
+        }
+    }
+
     @Override
     public UUID getIdValue() {
         return getValue();

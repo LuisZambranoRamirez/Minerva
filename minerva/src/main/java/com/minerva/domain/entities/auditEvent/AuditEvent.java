@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import com.minerva.domain.constants.Permission;
+import com.minerva.domain.constants.AuditEventType;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.entities.user.UserId;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
@@ -13,16 +14,19 @@ import com.minerva.domain.valueObject.id.UserName;
 
 public class AuditEvent extends Entity<AuditEventId> {
     private final UserId userId;
+    private final AuditEventType eventType;
     private final Permission permission;
     private final Auditable auditable;
     
     private final LocalDateTime registrationDate;
 
     public AuditEvent(String userName, Permission permission, Auditable auditable) throws InvalidDomainArgumentException {
+        super(AuditEventIdImpl.generate());
+
         if (permission == null) throw new NullValueException("El permiso no puede ser nulo.");
         if (auditable == null) throw new NullValueException("La entidad no puede ser nula.");
 
-        super(AuditEventIdImpl.generate());
+        this.eventType = AuditEventType.fromPermission(permission);
         this.permission = permission;
         this.userId = new UserName(userName);
         this.auditable = auditable;
@@ -35,6 +39,10 @@ public class AuditEvent extends Entity<AuditEventId> {
 
     public Permission getPermission() {
         return permission;
+    }
+
+    public AuditEventType getEventType() {
+        return eventType;
     }
 
     public Auditable getAuditable() {
@@ -50,6 +58,7 @@ public class AuditEvent extends Entity<AuditEventId> {
         return Set.of(
             new StringAttribute(getId()),
             new StringAttribute(userId),
+            new StringAttribute(eventType),
             new StringAttribute(permission),
             new StringAttribute("subjectId", auditable.getAuditSubjectId().getIdValueAsString()),
             new StringAttribute("subjectName", auditable.getAuditSubjectName()),

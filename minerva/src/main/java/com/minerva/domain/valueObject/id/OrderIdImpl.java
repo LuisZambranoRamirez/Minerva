@@ -2,41 +2,41 @@ package com.minerva.domain.valueObject.id;
 
 import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
-import com.minerva.domain.entities.supplier.SupplierId;
-import com.minerva.domain.exceptions.NullValueException;
+import com.minerva.domain.entities.order.OrderId;
 import com.minerva.domain.exceptions.InvalidDomainArgumentException;
+import com.minerva.domain.exceptions.NullValueException;
 import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.ValueObject;
 
 import java.util.Set;
 import java.util.UUID;
 
-public final class SupplierIdImpl extends ValueObject<UUID> implements SupplierId {
+public final class OrderIdImpl extends ValueObject<UUID> implements OrderId {
 
-    public SupplierIdImpl(UUID value) throws NullValueException {
+    public OrderIdImpl(UUID value) throws NullValueException {
         super(value);
     }
 
-    public static SupplierIdImpl generate() {
+    public static OrderIdImpl generate() {
         try {
-            return new SupplierIdImpl(UUID.randomUUID());
+            return new OrderIdImpl(UUID.randomUUID());
         } catch (NullValueException e) {
             throw new UnexpectedDomainException(
-                    "Error al generar el ID de supplier: " + e.getMessage(),
+                    "Error al generar el ID de pedido: " + e.getMessage(),
                     e
             );
         }
     }
 
-    public static SupplierIdImpl fromString(String value) throws InvalidDomainArgumentException {
+    public static OrderIdImpl fromString(String value) throws InvalidDomainArgumentException {
         if (value == null || value.isBlank()) {
-            throw new InvalidDomainArgumentException("El ID del proveedor no puede estar vacío.");
+            throw new InvalidDomainArgumentException("El ID de pedido no puede estar vacío.");
         }
 
         try {
-            return new SupplierIdImpl(UUID.fromString(value));
+            return new OrderIdImpl(UUID.fromString(value));
         } catch (IllegalArgumentException e) {
-            throw new InvalidDomainArgumentException("El ID del proveedor no tiene un formato UUID válido.", e);
+            throw new InvalidDomainArgumentException("El ID de pedido no tiene un formato UUID válido.", e);
         }
     }
 
@@ -52,12 +52,12 @@ public final class SupplierIdImpl extends ValueObject<UUID> implements SupplierI
 
     @Override
     public String getIdName() {
-        return "supplierId";
+        return "orderId";
     }
 
     @Override
     public String getAuditSubjectName() {
-        return "supplierId";
+        return "orderId";
     }
 
     @Override
@@ -67,8 +67,6 @@ public final class SupplierIdImpl extends ValueObject<UUID> implements SupplierI
 
     @Override
     public Set<Attribute<?>> getAuditData() {
-        return Set.of(
-                new StringAttribute(getAuditSubjectId())
-        );
+        return Set.of(new StringAttribute(getAuditSubjectId()));
     }
 }

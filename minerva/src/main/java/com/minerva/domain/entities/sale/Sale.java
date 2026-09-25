@@ -4,16 +4,17 @@ import com.minerva.domain.entities.auditEvent.NumericAttribute;
 import com.minerva.domain.entities.auditEvent.ArrayAttribute;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.entities.customer.CustomerId;
-import com.minerva.domain.entities.product.SaleProduct;
+import com.minerva.domain.valueObject.id.Id;
 import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.exceptions.*;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.entities.product.ProductId;
+import com.minerva.domain.entities.product.SaleProduct;
+import com.minerva.domain.entities.order.OrderId;
 import com.minerva.domain.services.Result;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.constants.PaymentMethod;
-import com.minerva.domain.valueObject.id.CustomerIdImpl;
 import com.minerva.domain.valueObject.id.SaleIdImpl;
 
 import java.math.BigDecimal;
@@ -23,20 +24,34 @@ import java.util.*;
 public class Sale extends Entity<SaleId> implements SaleProduct {
     private final CustomerId customerId;
     private final LocalDateTime registrationDate;
+    private final OrderId sourceOrderId;
 
     private final List<Pay> pays =  new LinkedList<>();
     private final Map<ProductId, SaleDetail> saleDetails = new HashMap<>();
 
-    public Sale(UUID customerId, List<SaleItemCreateDTO> items) throws DomainException {
+    public Sale(CustomerId customerId, List<SaleItemCreateDTO> items) throws DomainException {
+        this(customerId, items, null);
+    }
+
+    public Sale(CustomerId customerId, List<SaleItemCreateDTO> items, OrderId sourceOrderId) throws DomainException {
         super(SaleIdImpl.generate());
-        this.customerId = new CustomerIdImpl(customerId);
+        if (customerId == null) throw new NullValueException("El cliente no puede estar vacío.");
+        this.customerId = customerId;
+        this.sourceOrderId = sourceOrderId;
         this.addSaleItem(items);
         this.registrationDate = LocalDateTime.now();
     }
 
     public Sale(SaleId saleId, CustomerId customerId, LocalDateTime registrationDate, List<SaleItemRestoreDTO> saleItemRestoreDTOList, List<PayRestoreDTO> payRestoreDTOS) {
+        this(saleId, customerId, registrationDate, saleItemRestoreDTOList, payRestoreDTOS, null);
+    }
+
+    public Sale(SaleId saleId, CustomerId customerId, LocalDateTime registrationDate,
+                List<SaleItemRestoreDTO> saleItemRestoreDTOList, List<PayRestoreDTO> payRestoreDTOS,
+                OrderId sourceOrderId) {
         super(saleId);
         this.customerId = customerId;
+        this.sourceOrderId = sourceOrderId;
         this.registrationDate = registrationDate;
 
         for (SaleItemRestoreDTO saleItemRestoreDTO : saleItemRestoreDTOList) {
@@ -65,8 +80,8 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     public Set<Attribute<?>> getAuditData() {
         Set<Attribute<?>> attributes = new HashSet<>();
 
-        attributes.add(new StringAttribute(getId()));
-        attributes.add(new StringAttribute(customerId));
+        attributes.add(new StringAttribute((Id<?>) getId()));
+        attributes.add(new StringAttribute((Id<?>) customerId));
         attributes.add(new NumericAttribute("total", calculateTotal()));
         attributes.add(new NumericAttribute("totalPaid", calculateTotalPaid()));
         attributes.add(new NumericAttribute("amountDue", calculateAmountDue()));
@@ -113,6 +128,9 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
         if (items.isEmpty()) throw new DomainException("La venta debe tener al menos un item");
 
         for (SaleItemCreateDTO item : items) {
+            if (item == null || item.productSale() == null) {
+                throw new NullValueException("El producto de la venta no puede estar vacío.");
+            }
             ProductSale productSale = item.productSale();
 
             if (saleDetails.containsKey(productSale.getId())) {
@@ -159,6 +177,7 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     }
 
     public Result<Void> addPayment(PayCreateDTO payCreateDTO) {
+        if (payCreateDTO == null) return Result.fail("El pago no puede estar vacío.");
         if (isDueCanceled()) return Result.fail("La VENTA ya esta CANCELADA");
 
         Pay payCreated;
@@ -172,6 +191,17 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
             return Result.fail("El PAGO sobrepasa la DEUDA de la VENTA.");
 
         pays.add(payCreated);
+        return Result.success(null);
+    }
+
+    public Result<Void> addPayments(List<PayCreateDTO> payments) {
+        if (payments == null) return Result.fail("La lista de pagos no puede estar vacía.");
+
+        for (PayCreateDTO payment : payments) {
+            Result<Void> result = addPayment(payment);
+            if (result.isFail()) return result;
+        }
+
         return Result.success(null);
     }
 
@@ -223,4 +253,6 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     public CustomerId getCustomerId() {
         return customerId;
     }
+
+    public Optional<OrderId> getSourceOrderId() { return Optional.ofNullable(sourceOrderId); }
 }
