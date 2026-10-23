@@ -1,0 +1,14 @@
+target/
+.git/
+.github/
+.idea/
+.vscode/
+*.iml
+*.log
+logs/
+tmp/
+.DS_Store
+Thumbs.db
+README.md
+docs/
+mvnw.cmd
