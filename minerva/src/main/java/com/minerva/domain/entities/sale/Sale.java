@@ -22,11 +22,17 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 public class Sale extends Entity<SaleId> implements SaleProduct {
+    public enum CreditStatus {
+        SIN_CREDITO,
+        ACREDITADA_PARCIALMENTE,
+        ACREDITADA_TOTALMENTE
+    }
     private final CustomerId customerId;
     private final LocalDateTime registrationDate;
     private final OrderId sourceOrderId;
 
     private final List<Pay> pays =  new LinkedList<>();
+    private final List<CreditNote> creditNotes = new LinkedList<>();
     private final Map<ProductId, SaleDetail> saleDetails = new HashMap<>();
 
     public Sale(CustomerId customerId, List<SaleItemCreateDTO> items) throws DomainException {
@@ -74,6 +80,30 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
 
             this.pays.add(pay);
         }
+    }
+
+    public void restoreCreditNotes(List<CreditNote> notes) {
+        creditNotes.clear();
+        if (notes != null) creditNotes.addAll(notes);
+    }
+
+    public List<CreditNote> getCreditNotes() { return List.copyOf(creditNotes); }
+
+    public Money calculateTotalCredited() {
+        return creditNotes.stream().map(CreditNote::total).reduce(Money.zero(), Money::add);
+    }
+
+    public CreditStatus calculateCreditStatus() {
+        Money credited = calculateTotalCredited();
+        if (credited.isZero()) return CreditStatus.SIN_CREDITO;
+        return !credited.isLessThan(calculateTotal())
+                ? CreditStatus.ACREDITADA_TOTALMENTE
+                : CreditStatus.ACREDITADA_PARCIALMENTE;
+    }
+
+    public Money calculateCreditBalance() {
+        Money applied = calculateTotalPaid().add(calculateTotalCredited());
+        return applied.isGreaterThan(calculateTotal()) ? safeSubtract(applied, calculateTotal()) : Money.zero();
     }
 
     @Override
@@ -235,11 +265,13 @@ public class Sale extends Entity<SaleId> implements SaleProduct {
     }
 
     public Money calculateAmountDue() {
-        try {
-            return calculateTotal().subtract(calculateTotalPaid());
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al calcular el monto adeudado: " + e.getMessage(), e);
-        }
+        Money applied = calculateTotalPaid().add(calculateTotalCredited());
+        return calculateTotal().isGreaterThan(applied) ? safeSubtract(calculateTotal(), applied) : Money.zero();
+    }
+
+    private Money safeSubtract(Money left, Money right) {
+        try { return left.subtract(right); }
+        catch (DomainException e) { throw new UnexpectedDomainException("Error al calcular importes de la venta.", e); }
     }
 
     public boolean isDueCanceled() {

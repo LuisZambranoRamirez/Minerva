@@ -2,6 +2,7 @@ package com.minerva.application.service;
 
 import com.minerva.application.exceptions.UnauthorizedActionException;
 import com.minerva.application.exceptions.ResourceNotFoundException;
+import com.minerva.application.exceptions.ConflictException;
 import com.minerva.application.port.driven.CurrentUserProvider;
 import com.minerva.application.port.drivers.SaleUseCase;
 import com.minerva.domain.constants.Permission;
@@ -14,6 +15,7 @@ import com.minerva.domain.entities.inventory.InventoryMovementSource;
 import com.minerva.domain.entities.user.UserId;
 import com.minerva.domain.entities.sale.Sale;
 import com.minerva.domain.entities.sale.ProductReturn;
+import com.minerva.domain.entities.sale.CreditNote;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.repositories.CustomerRepository;
 import com.minerva.domain.repositories.ProductRepository;
@@ -128,7 +130,7 @@ public class SaleService extends Service implements SaleUseCase {
         }
         try {
             SaleIdImpl saleId = SaleIdImpl.fromString(saleIdValue);
-            Optional<Sale> saleResult = saleRepository.findById(saleId);
+            Optional<Sale> saleResult = saleRepository.findByIdForUpdate(saleId);
             if (saleResult.isEmpty()) throw new ResourceNotFoundException("Venta no encontrada.");
 
             Sale sale = saleResult.get();
@@ -213,7 +215,8 @@ public class SaleService extends Service implements SaleUseCase {
                 if (stockResult.isFail()) return stockResult;
             }
 
-            saleRepository.saveProductReturn(productReturn, product);
+            UserId actor = actorId();
+            saleRepository.saveProductReturn(productReturn, product, actor);
             if (productReturn.restoresStock()) {
                 movementRepository.append(new InventoryMovement(
                         product.getId(),
@@ -222,7 +225,7 @@ public class SaleService extends Service implements SaleUseCase {
                         product.getStock(),
                         InventoryMovementSource.PRODUCT_RETURN,
                         productReturn.getId().getIdValue(),
-                        actorId()
+                        actor
                 ));
             }
             registerUserAction(Permission.SALE_REGISTER_PRODUCT_RETURN, productReturn.getId());
@@ -258,6 +261,89 @@ public class SaleService extends Service implements SaleUseCase {
         registerUserAction(Permission.SALE_FIND_PRODUCT_RETURNS,
                 new CollectionAuditTarget(CollectionAuditTarget.Resource.PRODUCT_RETURNS));
         return returns;
+    }
+
+    @Override
+    @Transactional
+    public CreditNote issueCreditNote(String saleIdValue, String reference, List<CreditLineCommand> lines)
+            throws UnauthorizedActionException {
+        if (getUserRole().lacksPermission(Permission.SALE_ISSUE_CREDIT_NOTE)) {
+            throw new UnauthorizedActionException("El usuario no tiene permiso para emitir notas de crédito.");
+        }
+        try {
+            SaleIdImpl saleId = SaleIdImpl.fromString(saleIdValue);
+            Sale sale = saleRepository.findByIdForUpdate(saleId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada."));
+            if (lines == null || lines.isEmpty()) throw new ConflictException("CREDIT_NOTE_EMPTY");
+
+            Map<String, Sale.SaleItemReadDTO> details = sale.getSaleDetails().stream()
+                    .collect(Collectors.toMap(d -> d.saleDetailId().getIdValueAsString(), Function.identity()));
+            Set<String> seen = new LinkedHashSet<>();
+            List<CreditNote.Line> noteLines = new ArrayList<>();
+            Map<ProductId, Product> changedProducts = new java.util.LinkedHashMap<>();
+            Map<ProductId, ProductQuantity> stockBefore = new java.util.LinkedHashMap<>();
+
+            for (CreditLineCommand command : lines) {
+                if (command == null || !seen.add(command.saleDetailId())) {
+                    throw new ConflictException("CREDIT_NOTE_DUPLICATE_LINE");
+                }
+                Sale.SaleItemReadDTO detail = details.get(command.saleDetailId());
+                if (detail == null) throw new ConflictException("CREDIT_NOTE_DETAIL_NOT_IN_SALE");
+                ProductQuantity requested = new ProductQuantity(command.quantity());
+                BigDecimal already = sale.getCreditNotes().stream().flatMap(n -> n.getLines().stream())
+                        .filter(l -> l.productReturn().getSaleDetailId().equals(detail.saleDetailId()))
+                        .map(l -> l.productReturn().getQuantity().getValue())
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                if (already.add(requested.getValue()).compareTo(detail.productQuantity().getValue()) > 0) {
+                    throw new ConflictException("CREDIT_NOTE_QUANTITY_EXCEEDED");
+                }
+                ProductReturn productReturn = new ProductReturn(detail.saleDetailId(), requested, command.reason());
+                noteLines.add(new CreditNote.Line(productReturn, detail.unitPrice()));
+                if (productReturn.restoresStock()) {
+                    Product product = productRepository.findById(detail.productId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Producto de la venta no encontrado."));
+                    stockBefore.put(product.getId(), product.getStock());
+                    Result<Void> stock = product.increaseStock(requested);
+                    if (stock.isFail()) throw new ConflictException(stock.getMessage());
+                    changedProducts.put(product.getId(), product);
+                }
+            }
+
+            String effectiveReference = reference == null || reference.isBlank()
+                    ? "NC-" + java.util.UUID.randomUUID() : reference;
+            CreditNote note = new CreditNote(saleId, effectiveReference, actorId(), noteLines);
+            saleRepository.saveCreditNote(note, changedProducts);
+            for (CreditNote.Line line : noteLines) {
+                if (!line.productReturn().restoresStock()) continue;
+                Product product = changedProducts.get(details.get(line.productReturn().getSaleDetailId().getIdValueAsString()).productId());
+                movementRepository.append(new InventoryMovement(product.getId(), line.productReturn().getQuantity().getValue(),
+                        stockBefore.get(product.getId()), product.getStock(), InventoryMovementSource.PRODUCT_RETURN,
+                        line.productReturn().getId().getIdValue(), actorId()));
+            }
+            registerUserAction(Permission.SALE_ISSUE_CREDIT_NOTE, note.getId());
+            return note;
+        } catch (ConflictException | ResourceNotFoundException exception) {
+            throw exception;
+        } catch (DomainException exception) {
+            throw new ConflictException(exception.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CreditNote> findCreditNotesBySaleId(String saleIdValue) throws UnauthorizedActionException {
+        if (getUserRole().lacksPermission(Permission.SALE_FIND_CREDIT_NOTES)) {
+            throw new UnauthorizedActionException("El usuario no tiene permiso para consultar notas de crédito.");
+        }
+        try {
+            SaleIdImpl saleId = SaleIdImpl.fromString(saleIdValue);
+            if (saleRepository.findById(saleId).isEmpty()) throw new ResourceNotFoundException("Venta no encontrada.");
+            List<CreditNote> notes = saleRepository.findCreditNotesBySaleId(saleId);
+            registerUserAction(Permission.SALE_FIND_CREDIT_NOTES, saleId);
+            return notes;
+        } catch (DomainException exception) {
+            throw new IllegalArgumentException(exception.getMessage(), exception);
+        }
     }
 
     private UserId actorId() {

@@ -19,6 +19,11 @@ import java.util.UUID;
 @Builder
 public class ProductReturnEntity {
 
+    public ProductReturnEntity(UUID productReturnId, SaleDetailEntity saleDetail, BigDecimal quantity,
+                               ProductReturnReason reason, LocalDateTime registrationDate) {
+        this(productReturnId, saleDetail, null, quantity, reason, registrationDate);
+    }
+
     @Id
     @Column(name = "product_return_id")
     private UUID productReturnId;
@@ -30,6 +35,11 @@ public class ProductReturnEntity {
             foreignKey = @ForeignKey(name = "fk_product_return_sale_detail")
     )
     private SaleDetailEntity saleDetail;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "credit_note_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_product_return_credit_note"))
+    private CreditNoteEntity creditNote;
 
     @Column(name = "quantity", precision = 10, scale = 3, nullable = false)
     private BigDecimal quantity;

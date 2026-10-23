@@ -5,6 +5,7 @@ import com.minerva.domain.constants.PaymentMethod;
 import com.minerva.domain.constants.ProductReturnReason;
 import com.minerva.domain.entities.sale.ProductReturn;
 import com.minerva.domain.entities.sale.Sale;
+import com.minerva.domain.entities.sale.CreditNote;
 import com.minerva.domain.services.Result;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.util.Optional;
 public interface SaleUseCase {
     record SaleItemCommand(String productId, BigDecimal quantity, BigDecimal unitPrice) {}
     record PaymentCommand(BigDecimal amount, PaymentMethod paymentMethod) {}
+    record CreditLineCommand(String saleDetailId, BigDecimal quantity, ProductReturnReason reason) {}
 
     Result<Void> registerSale(String customerId, List<PaymentCommand> payments,
                               List<SaleItemCommand> items) throws UnauthorizedActionException;
@@ -27,4 +29,7 @@ public interface SaleUseCase {
     List<ProductReturn> findProductReturnsBySaleDetailId(String saleDetailId)
             throws UnauthorizedActionException;
     List<ProductReturn> findAllProductReturns() throws UnauthorizedActionException;
+    CreditNote issueCreditNote(String saleId, String reference, List<CreditLineCommand> lines)
+            throws UnauthorizedActionException;
+    List<CreditNote> findCreditNotesBySaleId(String saleId) throws UnauthorizedActionException;
 }
