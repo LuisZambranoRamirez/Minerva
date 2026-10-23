@@ -8,7 +8,6 @@ import com.minerva.domain.entities.product.ProductId;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.valueObject.ProductQuantity;
-import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.valueObject.id.OrderDetailIdImpl;
 
 import java.util.Set;
@@ -54,11 +53,7 @@ public class OrderDetail extends Entity<OrderDetailId> {
     }
 
     public Money calculateSubTotal() {
-        try {
-            return new Money(unitPrice.getValue().multiply(quantity.getValue()));
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al calcular el subtotal del detalle de pedido: " + e.getMessage(), e);
-        }
+        return unitPrice.multiply(quantity.getValue());
     }
 
     @Override

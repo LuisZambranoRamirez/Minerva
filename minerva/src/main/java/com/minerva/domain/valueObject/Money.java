@@ -77,6 +77,17 @@ public final class Money extends ValueObject<BigDecimal> {
         }
     }
 
+    public Money multiply(BigDecimal multiplier) {
+        try {
+            BigDecimal product = getValue()
+                    .multiply(multiplier)
+                    .setScale(MAX_DECIMALS, RoundingMode.HALF_UP);
+            return new Money(product);
+        } catch (InvalidDomainArgumentException e) {
+            throw new UnexpectedDomainException("Error al multiplicar montos: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Incrementa el valor actual de este dinero aplicando un porcentaje.
      *

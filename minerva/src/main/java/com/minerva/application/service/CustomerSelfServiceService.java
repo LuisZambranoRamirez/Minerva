@@ -346,7 +346,7 @@ public class CustomerSelfServiceService extends Service implements CustomerSelfS
                         detail.productId().getIdValueAsString(),
                         detail.quantity().getValue(),
                         detail.unitPrice().getValue(),
-                        detail.unitPrice().getValue().multiply(detail.quantity().getValue())
+                        detail.unitPrice().multiply(detail.quantity().getValue()).getValue()
                 ))
                 .toList();
         return new OrderView(

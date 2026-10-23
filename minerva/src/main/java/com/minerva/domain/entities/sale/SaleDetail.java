@@ -4,7 +4,6 @@ import com.minerva.domain.entities.auditEvent.Attribute;
 import com.minerva.domain.entities.auditEvent.NumericAttribute;
 import com.minerva.domain.entities.auditEvent.StringAttribute;
 import com.minerva.domain.exceptions.DomainException;
-import com.minerva.domain.exceptions.UnexpectedDomainException;
 import com.minerva.domain.entities.Entity;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.Money;
@@ -35,11 +34,7 @@ class SaleDetail extends Entity<SaleDetailId> {
     }
 
     public Money calculateSubTotal() {
-        try {
-            return new Money(unitPrice.getValue().multiply(quantity.getValue()));
-        } catch (DomainException e) {
-            throw new UnexpectedDomainException("Error al calcular el subtotal del detalle de venta: " + e.getMessage(), e);
-        }
+        return unitPrice.multiply(quantity.getValue());
     }
 
     public ProductQuantity getQuantity() {
