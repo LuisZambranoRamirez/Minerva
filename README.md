@@ -58,7 +58,9 @@ $env:DB_PASSWORD = "tu-clave"
 $env:JWT_SECRET = "una-clave-base64-segura-de-al-menos-256-bits"
 ```
 
-También se aceptan `JWT_EXPIRATION_MS`, `SERVER_PORT` y `JPA_SHOW_SQL`.
+También se aceptan `JWT_EXPIRATION_MS`, `PORT`, `SERVER_PORT` y
+`JPA_SHOW_SQL`. El puerto prioriza `PORT` (compatible con Railway), después
+`SERVER_PORT` y finalmente usa `8080`.
 
 El alta inicial de administrador es opcional. Para usarla, configurá
 `MINERVA_BOOTSTRAP_ENABLED=true` junto con todas las variables
@@ -74,6 +76,17 @@ Desde la raíz del repositorio:
 
 La aplicación solo está operativa cuando el arranque termina con
 `Started MinervaApplication` y no aparecen errores de conexión o validación.
+
+## Observabilidad
+
+- `GET /livez`: liveness público, sin componentes ni detalles internos.
+- `GET /readyz`: readiness público; incluye el estado de la base de datos sin
+  exponer sus detalles.
+- `GET /actuator/prometheus`: métricas Prometheus, requiere JWT con rol `ADMIN`.
+
+Actuator solo publica los endpoints `health` y `prometheus`; cualquier otro,
+como `/actuator/env`, permanece sin exponer. Las rutas públicas se limitan a
+los probes adicionales `/livez` y `/readyz`.
 
 ## Pruebas de integración con PostgreSQL real
 
