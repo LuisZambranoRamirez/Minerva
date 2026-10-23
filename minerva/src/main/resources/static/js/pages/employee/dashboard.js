@@ -17,10 +17,11 @@ export function renderDashboard({session}) {
 
   async function load() {
     try {
-      const [orders, products, lowStock] = await Promise.all([
+      const [orders, products, lowStock, salesSummary] = await Promise.all([
         request("/api/v1/orders", {token: session.accessToken}),
         request("/api/v1/products", {token: session.accessToken}),
-        request("/api/v1/products/low-stock", {token: session.accessToken})
+        request("/api/v1/products/low-stock", {token: session.accessToken}),
+        request("/api/v1/sales/summary", {token: session.accessToken})
       ]);
       const byStatus = countBy(orders, order => order.status);
       const openOrders = orders.filter(order => openStatuses.has(order.status));
@@ -29,7 +30,10 @@ export function renderDashboard({session}) {
         el("div", {className: "grid gap-5 md:grid-cols-3"}, [
           metric("Pedidos abiertos", openOrders.length, "Estados pendientes de operación"),
           metric("Productos registrados", products.length, "Listado autorizado de productos"),
-          metric("Productos con bajo stock", lowStock.length, "Según regla del backend", lowStock.length ? "warning" : "success")
+          metric("Productos con bajo stock", lowStock.length, "Según regla del backend", lowStock.length ? "warning" : "success"),
+          metric("Crédito emitido", money(salesSummary.creditedTotal), "Calculado por backend"),
+          metric("Saldo de ventas", money(salesSummary.amountDue), "Neto de pagos y créditos", "warning"),
+          metric("Excedente sin reembolso", money(salesSummary.creditBalance), "Sólo informativo")
         ]),
         card([
           el("h2", {className: "mb-4 text-xl font-bold text-primary", text: "Pedidos por estado"}),

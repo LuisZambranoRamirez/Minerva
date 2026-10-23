@@ -11,7 +11,7 @@ const returnReasons = ["DAÑADO", "VENCIDO", "EQUIVOCACION", "OTROS"];
 export function renderSales({session, query}) {
   const saleId = query.get("saleId") ?? "";
   const root = el("div", {className: "mx-auto grid max-w-7xl gap-6"}, [
-    heading("Ventas, pagos y devoluciones", "Operaciones soportadas por /api/v1/sales; sin cancelaciones, notas de crédito ni reembolsos simulados."),
+    heading("Ventas y notas de crédito", "Créditos auditables sin alterar pagos históricos ni generar reembolsos."),
     loadingState("Cargando ventas…")
   ]);
   employeeShell(session, root);
@@ -19,11 +19,12 @@ export function renderSales({session, query}) {
 
   async function load(selectedSaleId = "") {
     try {
-      const [sales, customers, products, returns] = await Promise.all([
+      const [sales, customers, products, returns, summary] = await Promise.all([
         request("/api/v1/sales", {token: session.accessToken}),
         request("/api/v1/customers", {token: session.accessToken}),
         request("/api/v1/products", {token: session.accessToken}),
-        request("/api/v1/sales/returns", {token: session.accessToken})
+        request("/api/v1/sales/returns", {token: session.accessToken}),
+        request("/api/v1/sales/summary", {token: session.accessToken})
       ]);
       const customersById = new Map(customers.map(customer => [customer.customerId, customer]));
       const productsById = new Map(products.map(product => [product.productId, product]));
@@ -34,7 +35,7 @@ export function renderSales({session, query}) {
         heading("Ventas, pagos y devoluciones", "Registrar venta directa, agregar pagos y registrar devoluciones reales por detalle."),
         el("div", {className: "grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(380px,.8fr)]"}, [
           card([el("h2", {className: "mb-4 text-xl font-bold text-primary", text: "Registrar venta"}), saleForm(customers, products)]),
-          card([el("h2", {className: "mb-4 text-xl font-bold text-primary", text: "Resumen"}), summaryMetrics(sales, returns)])
+          card([el("h2", {className: "mb-4 text-xl font-bold text-primary", text: "Resumen"}), summaryMetrics(summary)])
         ]),
         card([el("h2", {className: "mb-4 text-xl font-bold text-primary", text: "Ventas"}), salesTable(sales, customersById)]),
         selectedSale ? saleDetail(selectedSale, productsById) : null,
@@ -105,16 +106,25 @@ export function renderSales({session, query}) {
       {label: "Fecha", render: sale => el("span", {text: dateTime(sale.registrationDate)})},
       {label: "Total", render: sale => el("b", {text: money(sale.total)})},
       {label: "Pagado", render: sale => el("span", {text: money(sale.totalPaid)})},
-      {label: "Saldo", render: sale => badge(money(sale.amountDue), Number(sale.amountDue) > 0 ? "warning" : "success")}
+      {label: "Crédito", render: sale => el("span", {text: money(sale.totalCredited)})},
+      {label: "Saldo", render: sale => badge(money(sale.amountDue), Number(sale.amountDue) > 0 ? "warning" : "success")},
+      {label: "Estado", render: sale => badge(label(sale.status), Number(sale.amountDue) > 0 ? "warning" : "success")},
+      {label: "Estado de crédito", render: sale => badge(label(sale.creditStatus), sale.creditStatus === "ACREDITADA_TOTALMENTE" ? "success" : sale.creditStatus === "SIN_CREDITO" ? "info" : "warning")}
     ], sales, {empty: "No hay ventas registradas."});
   }
 
   function saleDetail(sale, productsById) {
     return card([
       heading(`Venta ${sale.saleId}`, `Cliente ${sale.customerId}`),
-      el("div", {className: "mb-5 grid gap-4 md:grid-cols-3"}, [
-        metric("Total", money(sale.total)), metric("Pagado", money(sale.totalPaid)), metric("Saldo", money(sale.amountDue))
+      el("div", {className: "mb-5 grid gap-4 md:grid-cols-5"}, [
+        metric("Total", money(sale.total)), metric("Pagado", money(sale.totalPaid)),
+        metric("Acreditado", money(sale.totalCredited)), metric("Saldo", money(sale.amountDue)),
+        metric("Excedente sin reembolso", money(sale.creditBalance)),
+        metric("Estado de crédito", label(sale.creditStatus))
       ]),
+      creditNoteForm(sale),
+      table([{label: "Referencia", key: "reference"}, {label: "Fecha", render: note => el("span", {text: dateTime(note.issuedAt)})},
+        {label: "Total", render: note => el("b", {text: money(note.total)})}], sale.creditNotes ?? [], {empty: "No hay notas de crédito."}),
       el("div", {className: "grid gap-5 xl:grid-cols-2"}, [
         el("section", {}, [el("h3", {className: "mb-3 font-bold text-primary", text: "Detalles"}), detailsTable(sale.details, productsById)]),
         el("section", {}, [el("h3", {className: "mb-3 font-bold text-primary", text: "Pagos"}), table([
@@ -157,6 +167,31 @@ export function renderSales({session, query}) {
     return form;
   }
 
+  function creditNoteForm(sale) {
+    const form = el("form", {className: "mb-5 grid gap-3 rounded-xl bg-surface-container p-4"});
+    const rows = sale.details.map(detail => el("div", {className: "grid gap-2 md:grid-cols-3", attrs: {"data-credit-line": detail.saleDetailId}}, [
+      el("span", {className: "font-mono text-xs", text: detail.saleDetailId}),
+      el("input", {className: "field", attrs: {type: "number", min: "0", step: "0.001", placeholder: "Cantidad (0 omite)"}}),
+      el("select", {className: "field"}, returnReasons.map(value => el("option", {text: label(value), attrs: {value}})))
+    ]));
+    const submit = button("Emitir nota de crédito", {type: "submit"});
+    form.append(el("h3", {className: "font-bold text-primary", text: "Nueva nota multi-línea"}), ...rows, submit);
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const lines = [...form.querySelectorAll("[data-credit-line]")].map(row => ({
+        saleDetailId: row.dataset.creditLine, quantity: Number(row.querySelector("input").value), reason: row.querySelector("select").value
+      })).filter(line => line.quantity > 0);
+      if (!lines.length) return toast("Ingresá al menos una cantidad.", {tone: "error"});
+      busy(submit, true);
+      try {
+        await request(`/api/v1/sales/${encodeURIComponent(sale.saleId)}/credit-notes`, {method: "POST", token: session.accessToken, body: {lines}});
+        toast("Nota de crédito emitida."); await load(sale.saleId);
+      } catch (error) { toast(error.status === 409 ? "El remanente cambió. Recargá e intentá nuevamente." : error.message, {tone: "error"}); }
+      finally { busy(submit, false); }
+    });
+    return form;
+  }
+
   function returnForm(saleDetailId) {
     const form = el("form", {className: "grid gap-2"});
     const quantity = el("input", {className: "field w-28", attrs: {name: "quantity", type: "number", min: "0.01", step: "0.01", required: true, "aria-label": "Cantidad devuelta"}});
@@ -195,7 +230,7 @@ function select(name, text, options, required = true) {
 }
 
 function metric(labelText, value, tone = "info") { return card([el("p", {className: "text-sm text-on-surface-variant", text: labelText}), el("p", {className: `mt-2 text-2xl font-bold ${tone === "warning" ? "text-amber-700" : "text-primary"}`, text: value})]); }
-function summaryMetrics(sales, returns) { return el("div", {className: "grid gap-4 sm:grid-cols-3 xl:grid-cols-1"}, [metric("Ventas", sales.length), metric("Devoluciones", returns.length), metric("Saldo pendiente total", money(sales.reduce((sum, sale) => sum + Number(sale.amountDue ?? 0), 0)), "warning")]); }
+function summaryMetrics(summary) { return el("div", {className: "grid gap-4 sm:grid-cols-3 xl:grid-cols-1"}, [metric("Ventas", summary.salesCount), metric("Crédito emitido", money(summary.creditedTotal)), metric("Saldo pendiente", money(summary.amountDue), "warning"), metric("Excedente sin reembolso", money(summary.creditBalance))]); }
 function productCell(product, productId) { return product ? el("div", {}, [el("b", {text: product.productName}), el("p", {className: "font-mono text-xs text-on-surface-variant", text: product.sku})]) : el("span", {className: "font-mono", text: productId}); }
 function label(value) { return String(value ?? "—").replaceAll("_", " ").toLowerCase().replace(/^./, char => char.toUpperCase()); }
 function showMsg(node, message, error) { node.className = `rounded-lg p-3 ${error ? "bg-error-container text-error" : "bg-secondary-container text-secondary"}`; node.textContent = message; }
