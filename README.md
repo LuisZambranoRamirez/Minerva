@@ -77,6 +77,28 @@ Desde la raíz del repositorio:
 La aplicación solo está operativa cuando el arranque termina con
 `Started MinervaApplication` y no aparecen errores de conexión o validación.
 
+## Despliegue en Railway
+
+- Configurá **Root Directory** como `/minerva`. Railway detectará el
+  `Dockerfile`; no agregues overrides de build ni de start.
+- Agregá un servicio PostgreSQL privado y definí estas variables en el servicio
+  de la aplicación usando referencias de Railway:
+
+  ```text
+  DB_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
+  DB_USERNAME=${{Postgres.PGUSER}}
+  DB_PASSWORD=${{Postgres.PGPASSWORD}}
+  JWT_SECRET=<secreto Base64 de al menos 256 bits>
+  ```
+
+  Si el servicio PostgreSQL tiene otro nombre, reemplazá `Postgres` en las
+  referencias. Guardá `JWT_SECRET` como secreto y no lo incorpores al repositorio.
+- Configurá el healthcheck HTTP en `/readyz`. Railway inyecta `PORT`; no hace
+  falta definirlo manualmente.
+- Para crear el administrador inicial, desplegá primero con una sola réplica,
+  `MINERVA_BOOTSTRAP_ENABLED=true` y todas las variables `MINERVA_ADMIN_*`.
+  Después del alta, desactivá el bootstrap y volvé a desplegar antes de escalar.
+
 ## Observabilidad
 
 - `GET /livez`: liveness público, sin componentes ni detalles internos.
