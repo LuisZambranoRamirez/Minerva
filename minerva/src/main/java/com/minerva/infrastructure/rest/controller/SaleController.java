@@ -5,6 +5,7 @@ import com.minerva.domain.constants.PaymentMethod;
 import com.minerva.domain.constants.ProductReturnReason;
 import com.minerva.domain.entities.sale.ProductReturn;
 import com.minerva.domain.entities.sale.Sale;
+import com.minerva.domain.entities.sale.CreditNote;
 import com.minerva.domain.services.Result;
 import com.minerva.infrastructure.rest.exception.BadRequestException;
 import com.minerva.application.exceptions.ResourceNotFoundException;
@@ -98,6 +99,39 @@ public class SaleController {
                 .stream().map(this::mapToResponse).toList());
     }
 
+    @PostMapping("/{saleId}/credit-notes")
+    public ResponseEntity<CreditNoteResponse> issueCreditNote(@PathVariable String saleId,
+            @Valid @RequestBody IssueCreditNoteRequest request) {
+        CreditNote note = saleService.issueCreditNote(saleId, request.reference(), request.lines().stream()
+                .map(line -> new SaleUseCase.CreditLineCommand(line.saleDetailId(), line.quantity(), line.reason()))
+                .toList());
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(note));
+    }
+
+    @GetMapping("/{saleId}/credit-notes")
+    public ResponseEntity<List<CreditNoteResponse>> findCreditNotes(@PathVariable String saleId) {
+        return ResponseEntity.ok(saleService.findCreditNotesBySaleId(saleId).stream()
+                .map(this::mapToResponse).toList());
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<SalesSummaryResponse> salesSummary() {
+        List<Sale> sales = saleService.findAllSales();
+        return ResponseEntity.ok(new SalesSummaryResponse(sales.size(),
+                sum(sales, "total"), sum(sales, "paid"), sum(sales, "credited"),
+                sum(sales, "due"), sum(sales, "balance")));
+    }
+
+    private BigDecimal sum(List<Sale> sales, String field) {
+        return sales.stream().map(sale -> switch (field) {
+            case "total" -> sale.calculateTotal().getValue();
+            case "paid" -> sale.calculateTotalPaid().getValue();
+            case "credited" -> sale.calculateTotalCredited().getValue();
+            case "balance" -> sale.calculateCreditBalance().getValue();
+            default -> sale.calculateAmountDue().getValue();
+        }).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     private SaleUseCase.SaleItemCommand toCommand(SaleItemRequest item) {
         return new SaleUseCase.SaleItemCommand(item.productId(), item.quantity(), item.unitPrice());
     }
@@ -129,8 +163,14 @@ public class SaleController {
                 sale.calculateTotal().getValue(),
                 sale.calculateTotalPaid().getValue(),
                 sale.calculateAmountDue().getValue(),
+                sale.calculateTotalCredited().getValue(),
+                sale.calculateCreditBalance().getValue(),
+                sale.calculateAmountDue().isZero() ? "CANCELADA"
+                        : sale.calculateTotalCredited().isGreaterThanZero() ? "ACREDITADA_PARCIAL" : "PENDIENTE",
+                sale.calculateCreditStatus().name(),
                 details,
-                payments
+                payments,
+                sale.getCreditNotes().stream().map(this::mapToResponse).toList()
         );
     }
 
@@ -142,6 +182,17 @@ public class SaleController {
                 productReturn.getReason(),
                 productReturn.getRegistrationDate()
         );
+    }
+
+    private CreditNoteResponse mapToResponse(CreditNote note) {
+        return new CreditNoteResponse(note.getId().getIdValueAsString(), note.getReference(),
+                note.getSaleId().getIdValueAsString(), note.getIssuedAt(),
+                note.getIssuedBy() == null ? null : note.getIssuedBy().getIdValueAsString(),
+                note.total().getValue(), note.getLines().stream().map(line -> new CreditNoteLineResponse(
+                        line.productReturn().getId().getIdValueAsString(),
+                        line.productReturn().getSaleDetailId().getIdValueAsString(),
+                        line.productReturn().getQuantity().getValue(), line.unitPrice().getValue(),
+                        line.subtotal().getValue(), line.productReturn().getReason())).toList());
     }
 
     public record RegisterSaleRequest(
@@ -157,6 +208,12 @@ public class SaleController {
             @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal quantity,
             @NotNull ProductReturnReason reason
     ) {}
+
+    public record IssueCreditNoteRequest(String reference,
+            @NotEmpty List<@Valid CreditNoteLineRequest> lines) {}
+    public record CreditNoteLineRequest(@NotBlank String saleDetailId,
+            @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal quantity,
+            @NotNull ProductReturnReason reason) {}
 
     public record SaleItemRequest(
             @NotBlank String productId,
@@ -176,9 +233,21 @@ public class SaleController {
             BigDecimal total,
             BigDecimal totalPaid,
             BigDecimal amountDue,
+            BigDecimal totalCredited,
+            BigDecimal creditBalance,
+            String status,
+            String creditStatus,
             List<SaleDetailResponse> details,
-            List<PaymentResponse> payments
+            List<PaymentResponse> payments,
+            List<CreditNoteResponse> creditNotes
     ) {}
+
+    public record CreditNoteResponse(String creditNoteId, String reference, String saleId,
+            LocalDateTime issuedAt, String issuedBy, BigDecimal total, List<CreditNoteLineResponse> lines) {}
+    public record CreditNoteLineResponse(String productReturnId, String saleDetailId,
+            BigDecimal quantity, BigDecimal unitPrice, BigDecimal subtotal, ProductReturnReason reason) {}
+    public record SalesSummaryResponse(int salesCount, BigDecimal grossTotal, BigDecimal paidTotal,
+            BigDecimal creditedTotal, BigDecimal amountDue, BigDecimal creditBalance) {}
 
     public record SaleDetailResponse(
             String saleDetailId,
