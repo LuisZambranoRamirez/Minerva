@@ -1,6 +1,15 @@
 # Minerva
 
+[![CI](https://github.com/LuisZambranoRamirez/Minerva/actions/workflows/ci.yml/badge.svg?branch=Diego)](https://github.com/LuisZambranoRamirez/Minerva/actions/workflows/ci.yml)
+
 Backend de distribución construido con Java 25, Spring Boot y PostgreSQL.
+
+## Integración continua
+
+GitHub Actions ejecuta `clean test` en Ubuntu con Java 25 (Temurin) ante cada
+push a `Diego` y en todos los pull requests. Las pruebas de integración usan
+Testcontainers con el Docker disponible en el runner; el workflow no levanta un
+servicio PostgreSQL ni configura credenciales de base de datos o JWT.
 
 ## Preparar PostgreSQL
 
