@@ -50,6 +50,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/customer-register"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/livez", "/readyz").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/customer-accounts/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/customer/**").hasRole("CLIENTE")
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
