@@ -1,12 +1,9 @@
 package com.minerva;
 
-import org.junit.jupiter.api.Disabled;
+import com.minerva.integration.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-@Disabled("Requiere PostgreSQL de integración con credenciales y migraciones disponibles")
-class MinervaApplicationTests {
+class MinervaApplicationTests extends IntegrationTest {
 
     @Test
     void contextLoads() {
