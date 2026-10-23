@@ -56,12 +56,14 @@ public enum Permission {
     SALE_REGISTER,
     SALE_ADD_PAYMENT,
     SALE_REGISTER_PRODUCT_RETURN,
+    SALE_ISSUE_CREDIT_NOTE,
 
     // Sale - Read
     SALE_FIND_BY_ID,
     SALE_FIND_BY_CUSTOMER_ID,
     SALE_FIND_ALL,
     SALE_FIND_PRODUCT_RETURNS,
+    SALE_FIND_CREDIT_NOTES,
 //---------------------------------------------------------
     // Supplier - Write
     SUPPLIER_REGISTER,

@@ -27,10 +27,12 @@ public enum Role {
             Permission.SALE_REGISTER,
             Permission.SALE_ADD_PAYMENT,
             Permission.SALE_REGISTER_PRODUCT_RETURN,
+            Permission.SALE_ISSUE_CREDIT_NOTE,
             Permission.SALE_FIND_BY_ID,
             Permission.SALE_FIND_BY_CUSTOMER_ID,
             Permission.SALE_FIND_ALL,
-            Permission.SALE_FIND_PRODUCT_RETURNS
+            Permission.SALE_FIND_PRODUCT_RETURNS,
+            Permission.SALE_FIND_CREDIT_NOTES
     )),
     ALMACENISTA(Set.of(
             Permission.PRODUCT_REGISTER,
