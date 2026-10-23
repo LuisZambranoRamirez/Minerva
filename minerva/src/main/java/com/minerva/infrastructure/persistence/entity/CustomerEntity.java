@@ -2,6 +2,8 @@ package com.minerva.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -22,6 +24,7 @@ public class CustomerEntity {
     @Column(name = "full_name", nullable = false, length = 100, unique = true)
     private String fullName;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "phone_number", length = 9, unique = true)
     private String phoneNumber;
 
@@ -34,6 +37,7 @@ public class CustomerEntity {
     @Column(name = "legal_name", length = 150)
     private String legalName;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "ruc", length = 11)
     private String ruc;
 

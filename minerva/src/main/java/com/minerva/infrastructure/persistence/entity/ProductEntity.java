@@ -52,6 +52,7 @@ public class ProductEntity {
     @Column(name = "reorder_level", precision = 10, scale = 3)
     private BigDecimal reorderLevel;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "bar_code", length = 13, unique = true)
     private String barCode;
 

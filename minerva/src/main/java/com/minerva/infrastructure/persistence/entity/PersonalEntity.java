@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 public class PersonalEntity {
 
     @Id
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "dni", length = 8)
     private String dni;
 
@@ -36,6 +37,7 @@ public class PersonalEntity {
     @Column(name = "lastnames", length = 100, nullable = false)
     private String lastNames;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "phone_number", length = 9, nullable = false, unique = true)
     private String phoneNumber;
 
