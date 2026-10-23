@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class DatabaseIsolationIntegrationTest extends IntegrationTest {
 
     private static final List<String> EXPECTED_FLYWAY_VERSIONS =
-            List.of("1", "2", "3", "4", "5", "6", "7", "8");
+            List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
 
     private static final Set<String> EXPECTED_CUSTOMER_PERMISSIONS = Set.of(
             "CUSTOMER_CATALOG_READ",

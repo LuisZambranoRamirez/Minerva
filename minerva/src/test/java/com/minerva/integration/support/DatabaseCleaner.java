@@ -16,6 +16,7 @@ public final class DatabaseCleaner {
             "audit_event",
             "customer",
             "customer_order",
+            "credit_note",
             "exception_log",
             "flyway_schema_history",
             "inventory_movement",

@@ -307,7 +307,7 @@ class OrderServiceTest {
         @Override public void updatePayments(Sale sale) { }
         @Override public Optional<SaleRepository.ReturnContext> findReturnContextForUpdate(SaleDetailId saleDetailId) { return Optional.empty(); }
         @Override public boolean existsSaleDetailById(SaleDetailId saleDetailId) { return false; }
-        @Override public void saveProductReturn(ProductReturn productReturn, Product product) { }
+        @Override public void saveProductReturn(ProductReturn productReturn, Product product, UserId actor) { }
         @Override public List<ProductReturn> findProductReturnsBySaleDetailId(SaleDetailId saleDetailId) { return List.of(); }
         @Override public List<ProductReturn> findAllProductReturns() { return List.of(); }
     }

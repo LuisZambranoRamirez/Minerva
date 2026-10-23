@@ -22,6 +22,7 @@ class FlywayIntegrationTest extends IntegrationTest {
             "audit_event",
             "customer",
             "customer_order",
+            "credit_note",
             "exception_log",
             "inventory_movement",
             "order_detail",
@@ -62,7 +63,7 @@ class FlywayIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void flywayRecordsVersionsOneThroughEightExactlyOnce() {
+    void flywayRecordsVersionsOneThroughTenExactlyOnce() {
         List<String> appliedVersions = jdbcTemplate.queryForList("""
                 SELECT version
                 FROM flyway_schema_history
@@ -70,15 +71,15 @@ class FlywayIntegrationTest extends IntegrationTest {
                 ORDER BY installed_rank
                 """, String.class);
 
-        assertEquals(List.of("1", "2", "3", "4", "5", "6", "7", "8"), appliedVersions);
-        assertEquals(8, jdbcTemplate.queryForObject(
+        assertEquals(List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), appliedVersions);
+        assertEquals(10, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE NOT success", Integer.class));
     }
 
     @Test
-    void migratedSchemaContainsAllV1ThroughV8TablesAndEnums() {
+    void migratedSchemaContainsCreditNotesAndAllApplicationTables() {
         Set<String> tables = Set.copyOf(jdbcTemplate.queryForList("""
                 SELECT table_name
                 FROM information_schema.tables
@@ -99,5 +100,9 @@ class FlywayIntegrationTest extends IntegrationTest {
         assertEquals(List.of("ADMIN", "VENDEDOR", "ALMACENISTA", "CLIENTE"), roleValues);
         assertEquals(6, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM role_permission WHERE id_role = CAST('CLIENTE' AS role)", Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_name = 'product_return' AND column_name = 'credit_note_id' AND is_nullable <> 'NO'
+                """, Integer.class));
     }
 }
