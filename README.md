@@ -4,6 +4,9 @@
 
 Backend de distribución construido con Java 25, Spring Boot y PostgreSQL.
 
+La semántica y los contratos de notas de crédito por devoluciones están documentados en
+[`minerva/docs/credit-notes.md`](minerva/docs/credit-notes.md).
+
 ## Integración continua
 
 GitHub Actions ejecuta `clean test` en Ubuntu con Java 25 (Temurin) ante cada
