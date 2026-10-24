@@ -7,6 +7,9 @@ Backend de distribución construido con Java 25, Spring Boot y PostgreSQL.
 La semántica y los contratos de notas de crédito por devoluciones están documentados en
 [`minerva/docs/credit-notes.md`](minerva/docs/credit-notes.md).
 
+El catálogo demo con imágenes, sus datos y el arranque local seguro están documentados en
+[`minerva/docs/demo-product-catalog.md`](minerva/docs/demo-product-catalog.md).
+
 ## Integración continua
 
 GitHub Actions ejecuta `clean test` en Ubuntu con Java 25 (Temurin) ante cada
@@ -34,14 +37,14 @@ aplicar manualmente cambios que Flyway ya administra.
 Hacé un respaldo y arrancá la aplicación una sola vez con la misma base. Si el
 esquema contiene tablas pero todavía no posee `flyway_schema_history`, la opción
 `baseline-on-migrate` registra la versión `1` como línea base y luego ejecuta
-las migraciones `V2` a `V8`.
+las migraciones `V2` a `V11`.
 
 Este baseline **solo ocurre sobre un esquema no vacío sin historial**. Una base
 vacía no se marca como existente: Flyway ejecuta `V1` y crea todas las tablas.
-Las migraciones versionadas disponibles actualmente son `V1` a `V8`. `V2` a
+Las migraciones versionadas disponibles actualmente son `V1` a `V11`. `V2` a
 `V5` conservan las defensas de idempotencia necesarias para adoptar esquemas
-antiguos; `V6` a `V8` incorporan el flujo de pedidos, el autoservicio de clientes
-y sus permisos.
+antiguos; las versiones posteriores incorporan los flujos funcionales y la
+persistencia del catálogo con imágenes.
 
 El único paso manual para adoptar Flyway es hacer el respaldo y permitir ese
 primer arranque. Desde entonces, no vuelvas a aplicar scripts desde `SQL/`:
@@ -116,7 +119,7 @@ los probes adicionales `/livez` y `/readyz`.
 ## Pruebas de integración con PostgreSQL real
 
 La suite de integración levanta el contexto completo de Spring Boot, crea un
-contenedor efímero `postgres:17`, aplica Flyway `V1` a `V8` y prueba seguridad
+contenedor efímero `postgres:17`, aplica Flyway `V1` a `V11` y prueba seguridad
 JWT, endpoints HTTP, persistencia, restricciones y concurrencia contra
 PostgreSQL real. No usa H2.
 
@@ -190,7 +193,7 @@ La evidencia esperada es:
 - Archivos `TEST-*.xml` y `*.txt` de Surefire, incluidos los reportes de
   `FlywayIntegrationTest`, `SecurityHttpIntegrationTest` y las pruebas de
   concurrencia.
-- `FlywayIntegrationTest` confirma PostgreSQL 17, las versiones `1` a `8` una
+- `FlywayIntegrationTest` confirma PostgreSQL 17, las versiones `1` a `11` una
   sola vez y la clasificación completa de tablas y enums.
 
 Registrá además fecha, sistema operativo, salida de Java/Docker, comando exacto,
@@ -209,7 +212,7 @@ ejecución anterior.
   acceso al registro; podés validar la descarga con `docker pull postgres:17`.
 - **Falla Flyway o Hibernate:** leé primero el reporte de
   `FlywayIntegrationTest`; la suite usa únicamente las migraciones productivas
-  `V1` a `V8` y `ddl-auto=validate`.
+  `V1` a `V11` y `ddl-auto=validate`.
 - **Un test queda bloqueado o falla por estado:** confirmá que la ejecución
   paralela siga deshabilitada y revisá el reporte de la clase. El limpiador es
   deliberadamente estricto: una tabla nueva exige clasificarla antes de volver
