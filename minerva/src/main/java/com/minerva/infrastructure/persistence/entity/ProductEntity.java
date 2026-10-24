@@ -68,5 +68,8 @@ public class ProductEntity {
 
     @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
+
+    @Column(name = "image_path", length = 120)
+    private String imagePath;
 }
 
