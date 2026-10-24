@@ -13,15 +13,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.minerva.integration.support.ExpectedFlywayMigrations.EXPECTED_VERSIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class DatabaseIsolationIntegrationTest extends IntegrationTest {
-
-    private static final List<String> EXPECTED_FLYWAY_VERSIONS =
-            List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
 
     private static final Set<String> EXPECTED_CUSTOMER_PERMISSIONS = Set.of(
             "CUSTOMER_CATALOG_READ",
@@ -102,7 +100,7 @@ class DatabaseIsolationIntegrationTest extends IntegrationTest {
 
     private void assertPreservedStateIsAvailable() {
         assertEquals(
-                new PreservedState(EXPECTED_FLYWAY_VERSIONS, EXPECTED_CUSTOMER_PERMISSIONS, 1, 1),
+                new PreservedState(EXPECTED_VERSIONS, EXPECTED_CUSTOMER_PERMISSIONS, 1, 1),
                 preservedState()
         );
     }

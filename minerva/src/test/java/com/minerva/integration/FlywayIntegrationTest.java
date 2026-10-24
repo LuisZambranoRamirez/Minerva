@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.Set;
 
+import static com.minerva.integration.support.ExpectedFlywayMigrations.EXPECTED_VERSIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -63,7 +64,7 @@ class FlywayIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void flywayRecordsVersionsOneThroughTenExactlyOnce() {
+    void flywayRecordsExpectedVersionsExactlyOnce() {
         List<String> appliedVersions = jdbcTemplate.queryForList("""
                 SELECT version
                 FROM flyway_schema_history
@@ -71,8 +72,8 @@ class FlywayIntegrationTest extends IntegrationTest {
                 ORDER BY installed_rank
                 """, String.class);
 
-        assertEquals(List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), appliedVersions);
-        assertEquals(10, jdbcTemplate.queryForObject(
+        assertEquals(EXPECTED_VERSIONS, appliedVersions);
+        assertEquals(EXPECTED_VERSIONS.size(), jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE NOT success", Integer.class));
