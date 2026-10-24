@@ -3,6 +3,7 @@ import {el} from "../../core/dom.js";
 import {dateTime} from "../../core/format.js";
 import {employeeShell} from "../../ui/shells.js";
 import {badge, card, emptyState, errorState, heading, loadingState, table} from "../../ui/components.js";
+import {installProductImageFallback, productImageAttributes} from "../../core/product-image.mjs";
 
 const typeTone = type => type === "SALIDA" ? "error" : "info";
 const movementLabel = movement => `${movement.source ?? "MOVIMIENTO"}${movement.sourceId ? ` · ${movement.sourceId}` : ""}`;
@@ -34,6 +35,7 @@ export function renderInventory({session, query}) {
         card([
           el("h2", {className: "mb-4 text-xl font-bold text-primary", text: "Productos"}),
           table([
+            {label: "Imagen", render: product => productImage(product)},
             {label: "SKU", key: "sku"},
             {label: "Producto", key: "productName"},
             {label: "Categoría", key: "category"},
@@ -95,4 +97,8 @@ function productCell(product, productId) {
     el("b", {text: product.productName}),
     el("p", {className: "font-mono text-xs text-on-surface-variant", text: product.sku})
   ]);
+}
+
+function productImage(product) {
+  return installProductImageFallback(el("img", {className: "product-thumbnail", attrs: productImageAttributes(product)}));
 }
