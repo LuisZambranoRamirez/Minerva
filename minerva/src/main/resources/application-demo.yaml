@@ -1,0 +1,4 @@
+minerva:
+  demo:
+    catalog:
+      enabled: ${MINERVA_DEMO_CATALOG_ENABLED:false}

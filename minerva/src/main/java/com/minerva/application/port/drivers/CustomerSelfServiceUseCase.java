@@ -19,6 +19,7 @@ public interface CustomerSelfServiceUseCase {
             String category,
             String saleType,
             BigDecimal price,
+            String imageUrl,
             CatalogAvailability availability
     ) {}
 

@@ -335,6 +335,7 @@ public class CustomerSelfServiceService extends Service implements CustomerSelfS
                 product.getCategory().name(),
                 product.getSaleType().name(),
                 product.getPrice().getValue(),
+                product.getImagePath().map(path -> "/assets/" + path.getValue()).orElse(null),
                 product.getStock().isGreaterThanZero() ? CatalogAvailability.DISPONIBLE : CatalogAvailability.AGOTADO
         );
     }

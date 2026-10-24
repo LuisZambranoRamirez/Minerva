@@ -225,7 +225,8 @@ public class ProductRepositoryAdapter implements ProductRepository {
                     new ProductQuantity(entity.getStock()),
                     entity.getCategory(),
                     new Money(entity.getCost()),
-                    entity.getRegistrationDate()
+                    entity.getRegistrationDate(),
+                    entity.getImagePath()
             );
         } catch (DomainException e) {
             throw new EntityRestoreException("Error al restaurar el producto.", e);
@@ -246,7 +247,8 @@ public class ProductRepositoryAdapter implements ProductRepository {
                 product.getBarCode().map(BarCode::getValue).orElse(null),
                 product.getSaleType(),
                 product.getCategory(),
-                product.getRegistrationDate()
+                product.getRegistrationDate(),
+                product.getImagePath().map(value -> value.getValue()).orElse(null)
         );
     }
 

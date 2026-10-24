@@ -18,6 +18,7 @@ public interface SupplierRepository {
     boolean existsByPhoneNumber(PhoneNumber phoneNumber);
     List<Supplier> findAll();
     Optional<Supplier> findById(SupplierId id);
+    Optional<Supplier> findBySupplierName(SupplierName supplierName);
     Optional<Supplier> findByRuc(RUC ruc);
     Optional<Supplier> findByPhone(PhoneNumber phoneNumber);
 }

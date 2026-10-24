@@ -29,7 +29,8 @@ public interface ProductUseCase {
                                  String purchasedFromSupplierId,
                                  BigDecimal purchaseUnitPrice,
                                  BigDecimal purchaseQuantity,
-                                 LocalDateTime purchaseExpirationDate
+                                 LocalDateTime purchaseExpirationDate,
+                                 String imagePath
                                  ) throws UnauthorizedActionException;
 
     Result<Void> registerStockEntry(String productId, String supplierNameId, BigDecimal unitPrice, BigDecimal quantity, LocalDateTime expirationDate) throws UnauthorizedActionException;

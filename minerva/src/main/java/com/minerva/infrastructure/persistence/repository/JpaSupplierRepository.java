@@ -12,4 +12,5 @@ public interface JpaSupplierRepository extends JpaRepository<SupplierEntity, UUI
     boolean existsByRuc(String ruc);
     boolean existsByPhoneNumber(String phoneNumber);
     boolean existsBySupplierName(String supplierName);
+    Optional<SupplierEntity> findBySupplierName(String supplierName);
 }

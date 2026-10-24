@@ -62,7 +62,8 @@ public class ProductController {
                 request.purchasedFromSupplierId(),
                 request.purchaseUnitPrice(),
                 request.purchaseQuantity(),
-                request.purchaseExpirationDate()
+                request.purchaseExpirationDate(),
+                request.imagePath()
         );
 
         if (result.isFail()) throw new BadRequestException(result.getMessage());
@@ -215,8 +216,13 @@ public class ProductController {
                 product.getSaleType().name(),
                 product.getCategory().name(),
                 product.getStock().getValue(),
-                product.getReorderLevel().map(value -> value.getValue()).orElse(null)
+                product.getReorderLevel().map(value -> value.getValue()).orElse(null),
+                imageUrl(product)
         );
+    }
+
+    private String imageUrl(Product product) {
+        return product.getImagePath().map(path -> "/assets/" + path.getValue()).orElse(null);
     }
 
     private InventoryMovementResponse mapToResponse(InventoryMovement movement) {
@@ -287,7 +293,8 @@ public class ProductController {
             @NotBlank String purchasedFromSupplierId,
             @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal purchaseUnitPrice,
             @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal purchaseQuantity,
-            @NotNull LocalDateTime purchaseExpirationDate
+            @NotNull LocalDateTime purchaseExpirationDate,
+            String imagePath
     ) {}
 
     public record RegisterStockEntryRequest(
@@ -317,7 +324,8 @@ public class ProductController {
             String saleType,
             String category,
             BigDecimal stock,
-            BigDecimal reorderLevel
+            BigDecimal reorderLevel,
+            String imageUrl
     ) {}
 
     public record InventoryMovementResponse(

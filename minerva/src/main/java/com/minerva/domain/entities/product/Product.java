@@ -20,6 +20,7 @@ import com.minerva.domain.valueObject.Money;
 import com.minerva.domain.valueObject.ProductName;
 import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.ProductStock;
+import com.minerva.domain.valueObject.ProductImagePath;
 import com.minerva.domain.valueObject.SKU;
 import com.minerva.domain.valueObject.id.Id;
 import com.minerva.domain.valueObject.id.ProductIdImpl;
@@ -42,6 +43,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
     private Money cost;
     private final ProductCategory productCategory;
     private final LocalDateTime registrationDate;
+    private final ProductImagePath imagePath;
 
     private final Map<Modifier, Money> modifiers = new HashMap<>();
     private final Map<Product, ProductQuantity> bulkProducts = new HashMap<>();
@@ -57,6 +59,15 @@ public class Product extends Entity<ProductId> implements ProductSale {
             BigDecimal initialStock,
             ProductCategory productCategory,
             BigDecimal purchasePrice
+    ) throws DomainException {
+        this(sku, productName, gainStrategy, gainAmount, reorderLevel, barCode, saleType, initialStock,
+                productCategory, purchasePrice, null);
+    }
+
+    public Product(
+            String sku, String productName, GainStrategy gainStrategy, BigDecimal gainAmount,
+            BigDecimal reorderLevel, String barCode, SaleType saleType, BigDecimal initialStock,
+            ProductCategory productCategory, BigDecimal purchasePrice, String imagePath
     ) throws DomainException {
         super(ProductIdImpl.generate());
 
@@ -76,6 +87,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
         this.cost = new Money(purchasePrice);
         this.registrationDate = LocalDateTime.now();
         this.barCode = createBarCode(barCode, saleType);
+        this.imagePath = imagePath == null ? null : new ProductImagePath(imagePath);
     }
 
     public Product(
@@ -91,6 +103,16 @@ public class Product extends Entity<ProductId> implements ProductSale {
             ProductCategory productCategory,
             Money cost,
             LocalDateTime registrationDate
+    ) {
+        this(productId, sku, productName, gainStrategy, gainAmount, reorderLevel, barCode, saleType,
+                stock, productCategory, cost, registrationDate, null);
+    }
+
+    public Product(
+            ProductId productId, SKU sku, ProductName productName, GainStrategy gainStrategy,
+            BigDecimal gainAmount, BigDecimal reorderLevel, String barCode, SaleType saleType,
+            ProductQuantity stock, ProductCategory productCategory, Money cost,
+            LocalDateTime registrationDate, String imagePath
     ) {
         super(productId);
 
@@ -111,6 +133,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
             this.productCategory = productCategory;
             this.cost = cost;
             this.registrationDate = registrationDate;
+            this.imagePath = imagePath == null ? null : new ProductImagePath(imagePath);
         } catch (DomainException e) {
             throw new EntityRestoreException("Error al restaurar el producto: " + e.getMessage(), e);
         }
@@ -208,6 +231,10 @@ public class Product extends Entity<ProductId> implements ProductSale {
         return registrationDate;
     }
 
+    public Optional<ProductImagePath> getImagePath() {
+        return Optional.ofNullable(imagePath);
+    }
+
     @Override
     public Money getCost() {
         return cost;
@@ -242,6 +269,7 @@ public class Product extends Entity<ProductId> implements ProductSale {
         attributes.add(new NumericAttribute("price", calculatePrice()));
         attributes.add(new StringAttribute(productCategory));
         attributes.add(new StringAttribute("registrationDate", registrationDate));
+        getImagePath().ifPresent(value -> attributes.add(new StringAttribute(value)));
         return Set.copyOf(attributes);
     }
 }

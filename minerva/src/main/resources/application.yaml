@@ -43,6 +43,9 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:86000000}
 
 minerva:
+  demo:
+    catalog:
+      enabled: false
   bootstrap:
     enabled: ${MINERVA_BOOTSTRAP_ENABLED:false}
     admin:

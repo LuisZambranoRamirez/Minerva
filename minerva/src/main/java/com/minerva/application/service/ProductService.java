@@ -73,7 +73,8 @@ public class ProductService extends Service implements ProductUseCase {
             String purchasedFromSupplierId,
             BigDecimal purchaseUnitPrice,
             BigDecimal purchaseQuantity,
-            LocalDateTime purchaseExpirationDate
+            LocalDateTime purchaseExpirationDate,
+            String imagePath
     ) throws UnauthorizedActionException {
         requirePermission(Permission.PRODUCT_REGISTER, "registrar productos");
 
@@ -93,7 +94,8 @@ public class ProductService extends Service implements ProductUseCase {
                     saleType,
                     purchaseQuantity,
                     productCategory,
-                    purchaseUnitPrice
+                    purchaseUnitPrice,
+                    imagePath
             );
 
             if (productRepository.existsBySku(product.getSku())) {

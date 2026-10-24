@@ -59,6 +59,11 @@ public class SupplierRepositoryAdapter implements SupplierRepository{
         return jpaSupplierRepository.findById(id.getIdValue())
                 .map(this::toDomain);
     }
+
+    @Override
+    public Optional<com.minerva.domain.entities.supplier.Supplier> findBySupplierName(SupplierName supplierName) {
+        return jpaSupplierRepository.findBySupplierName(supplierName.getValue()).map(this::toDomain);
+    }
     
 
     @Override
