@@ -4,17 +4,25 @@ import com.minerva.domain.constants.GainStrategy;
 import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.SaleType;
 import com.minerva.domain.entities.product.Product;
+import com.minerva.domain.entities.inventory.InventoryMovement;
+import com.minerva.domain.entities.inventory.InventoryMovementSource;
 import com.minerva.domain.entities.stockEntry.StockEntry;
 import com.minerva.domain.entities.stockReceipt.StockReceipt;
 import com.minerva.domain.entities.supplier.Supplier;
 import com.minerva.domain.exceptions.DomainException;
 import com.minerva.domain.repositories.ProductRepository;
+import com.minerva.domain.repositories.InventoryMovementRepository;
 import com.minerva.domain.repositories.SupplierRepository;
+import com.minerva.domain.repositories.UserRepository;
+import com.minerva.domain.valueObject.ProductQuantity;
 import com.minerva.domain.valueObject.SupplierName;
+import com.minerva.domain.valueObject.id.UserName;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +34,35 @@ import java.util.List;
 @Component
 @Profile("demo")
 @ConditionalOnProperty(name = "minerva.demo.catalog.enabled", havingValue = "true")
+@Order(100)
 public class DemoCatalogBootstrap implements ApplicationRunner {
     private final SupplierRepository suppliers;
     private final ProductRepository products;
+    private final InventoryMovementRepository movements;
+    private final UserRepository users;
+    private final DemoCatalogSeedStore seeds;
+    private final String actorUsername;
 
-    public DemoCatalogBootstrap(SupplierRepository suppliers, ProductRepository products) {
+    public DemoCatalogBootstrap(
+            SupplierRepository suppliers,
+            ProductRepository products,
+            InventoryMovementRepository movements,
+            UserRepository users,
+            DemoCatalogSeedStore seeds,
+            @Value("${minerva.demo.catalog.actor-username:admin}") String actorUsername
+    ) {
         this.suppliers = suppliers;
         this.products = products;
+        this.movements = movements;
+        this.users = users;
+        this.seeds = seeds;
+        this.actorUsername = actorUsername;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
+        UserName actor = requireTechnicalActor();
         var supplierByName = new java.util.HashMap<String, Supplier>();
         for (String name : SUPPLIER_NAMES) {
             SupplierName value = new SupplierName(name);
@@ -52,6 +77,7 @@ public class DemoCatalogBootstrap implements ApplicationRunner {
                 boolean sameIdentity = sameSku.getProductName().getValue().equals(demo.name())
                         && java.util.Objects.equals(sameSku.getBarCode().map(v -> v.getValue()).orElse(null), demo.barcode());
                 if (!sameIdentity) throw new IllegalStateException("Conflicto en producto demo con SKU " + demo.sku());
+                repairCorrelatedMovementIfPresent(demo, sameSku, actor);
                 continue;
             }
             boolean collision = existing.stream().anyMatch(p -> p.getProductName().getValue().equals(demo.name())
@@ -62,8 +88,53 @@ public class DemoCatalogBootstrap implements ApplicationRunner {
             StockReceipt receipt = new StockReceipt(supplierByName.get(demo.supplier()).getId());
             StockEntry entry = new StockEntry(receipt.getId(), product.getId(), demo.cost(), demo.stock(), demo.expiration());
             products.registerProduct(product, receipt, entry);
+            seeds.save(demo.sku(), product.getId().getIdValue(), entry.getId().getIdValue());
+            appendInitialMovement(product, entry, actor);
             existing.add(product);
         }
+    }
+
+    private UserName requireTechnicalActor() {
+        try {
+            UserName actor = new UserName(actorUsername);
+            if (!users.existsById(actor)) {
+                throw new IllegalStateException(
+                        "El usuario técnico del catálogo demo no existe: " + actorUsername);
+            }
+            return actor;
+        } catch (DomainException exception) {
+            throw new IllegalStateException("El usuario técnico del catálogo demo es inválido.", exception);
+        }
+    }
+
+    private void repairCorrelatedMovementIfPresent(DemoProduct demo, Product product, UserName actor)
+            throws DomainException {
+        seeds.findBySeedKey(demo.sku()).ifPresent(seed -> {
+            if (!seed.productId().equals(product.getId().getIdValue())) {
+                throw new IllegalStateException("El manifiesto demo no corresponde al producto " + demo.sku());
+            }
+            try {
+                appendInitialMovement(product, demo.stock(), seed.initialStockEntryId(), actor);
+            } catch (DomainException exception) {
+                throw new IllegalStateException("No se pudo reparar el movimiento inicial de " + demo.sku(), exception);
+            }
+        });
+    }
+
+    private void appendInitialMovement(Product product, StockEntry entry, UserName actor) throws DomainException {
+        appendInitialMovement(product, entry.getQuantity().getValue(), entry.getId().getIdValue(), actor);
+    }
+
+    private void appendInitialMovement(Product product, BigDecimal quantity, java.util.UUID entryId, UserName actor)
+            throws DomainException {
+        movements.appendIfAbsent(new InventoryMovement(
+                product.getId(),
+                quantity,
+                ProductQuantity.zero(),
+                new ProductQuantity(quantity),
+                InventoryMovementSource.STOCK_ENTRY,
+                entryId,
+                actor));
     }
 
     private Supplier createSupplier(String name) {

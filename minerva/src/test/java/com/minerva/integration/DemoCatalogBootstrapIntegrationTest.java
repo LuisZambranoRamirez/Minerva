@@ -1,7 +1,10 @@
 package com.minerva.integration;
 
 import com.minerva.domain.repositories.ProductRepository;
+import com.minerva.domain.repositories.InventoryMovementRepository;
 import com.minerva.domain.repositories.SupplierRepository;
+import com.minerva.domain.repositories.UserRepository;
+import com.minerva.infrastructure.bootstrap.DemoCatalogSeedStore;
 import com.minerva.infrastructure.bootstrap.DemoCatalogBootstrap;
 import com.minerva.integration.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,9 @@ class DemoCatalogBootstrapIntegrationTest extends IntegrationTest {
     @Autowired ApplicationContext context;
     @Autowired SupplierRepository suppliers;
     @Autowired ProductRepository products;
+    @Autowired InventoryMovementRepository movements;
+    @Autowired UserRepository users;
+    @Autowired DemoCatalogSeedStore seeds;
     @Autowired TransactionTemplate transactions;
 
     @Test
@@ -37,23 +43,60 @@ class DemoCatalogBootstrapIntegrationTest extends IntegrationTest {
 
     @Test
     void doubleOptInSeedCreatesExactDatasetAndRerunPreservesOperationalChanges() {
-        runSeed();
+        var actor = fixtures.warehouseUser();
+        runSeed(actor.username());
 
         assertEquals(11L, demoProducts());
         assertEquals(6L, demoSuppliers());
         assertEquals(11L, count("SELECT COUNT(*) FROM stock_receipt sr JOIN stock_entry se ON se.id_stock_receipt = sr.stock_receipt_id JOIN product p ON p.product_id = se.id_product WHERE p.sku LIKE '%-DEMO'"));
         assertEquals(11L, count("SELECT COUNT(*) FROM stock_entry se JOIN product p ON p.product_id = se.id_product WHERE p.sku LIKE '%-DEMO'"));
+        assertEquals(11L, count("SELECT COUNT(*) FROM demo_catalog_seed"));
+        assertEquals(11L, count("""
+                SELECT COUNT(*)
+                FROM demo_catalog_seed seed
+                JOIN inventory_movement movement
+                  ON movement.source_id = seed.initial_stock_entry_id
+                 AND movement.movement_source = CAST('STOCK_ENTRY' AS inventory_movement_source)
+                WHERE movement.id_product = seed.product_id
+                  AND movement.stock_before = 0
+                  AND movement.stock_after = movement.quantity
+                  AND movement.actor_user_name = 'almacen01'
+                """));
         assertExactCatalogRows();
 
         jdbcTemplate.update("UPDATE product SET stock = ?, cost = ? WHERE sku = 'ARRO-0001-DEMO'",
                 new BigDecimal("7"), new BigDecimal("99.99"));
-        runSeed();
+        UUID operationalMovementId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO inventory_movement (
+                    inventory_movement_id, id_product, quantity, stock_before, stock_after,
+                    movement_type, movement_source, source_id, actor_user_name, registration_date
+                )
+                SELECT ?, product_id, -1, 8, 7,
+                       CAST('SALIDA' AS inventory_movement_type),
+                       CAST('DIRECT_SALE' AS inventory_movement_source),
+                       ?, 'almacen01', CURRENT_TIMESTAMP
+                FROM product WHERE sku = 'ARRO-0001-DEMO'
+                """, operationalMovementId, UUID.randomUUID());
+        UUID arrozEntry = jdbcTemplate.queryForObject("""
+                SELECT initial_stock_entry_id FROM demo_catalog_seed WHERE seed_key = 'ARRO-0001-DEMO'
+                """, UUID.class);
+        jdbcTemplate.update("DELETE FROM inventory_movement WHERE source_id = ?", arrozEntry);
+        runSeed(actor.username());
 
         assertEquals(11L, demoProducts());
         assertEquals(6L, demoSuppliers());
         assertEquals(new BigDecimal("7.000"), decimal("SELECT stock FROM product WHERE sku = 'ARRO-0001-DEMO'"));
         assertEquals(new BigDecimal("99.99"), decimal("SELECT cost FROM product WHERE sku = 'ARRO-0001-DEMO'"));
         assertEquals(11L, count("SELECT COUNT(*) FROM stock_entry se JOIN product p ON p.product_id = se.id_product WHERE p.sku LIKE '%-DEMO'"));
+        assertEquals(11L, count("SELECT COUNT(*) FROM demo_catalog_seed"));
+        assertEquals(11L, count("""
+                SELECT COUNT(*) FROM inventory_movement
+                WHERE movement_source = CAST('STOCK_ENTRY' AS inventory_movement_source)
+                """));
+        assertEquals(1L, count("SELECT COUNT(*) FROM inventory_movement WHERE source_id = '" + arrozEntry + "'"));
+        assertEquals(1L, count("SELECT COUNT(*) FROM inventory_movement WHERE inventory_movement_id = '"
+                + operationalMovementId + "'"));
     }
 
     private void assertExactCatalogRows() {
@@ -122,19 +165,21 @@ class DemoCatalogBootstrapIntegrationTest extends IntegrationTest {
 
     @Test
     void conflictingStableSkuAbortsTheWholeSeedTransaction() {
+        var actor = fixtures.warehouseUser();
         insertConflictingProduct();
 
-        assertThrows(IllegalStateException.class, this::runSeed);
+        assertThrows(IllegalStateException.class, () -> runSeed(actor.username()));
 
         assertEquals(1L, demoProducts());
         assertEquals(0L, demoSuppliers());
         assertEquals(0L, count("SELECT COUNT(*) FROM stock_entry"));
     }
 
-    private void runSeed() {
+    private void runSeed(String actorUsername) {
         transactions.executeWithoutResult(status -> {
             try {
-                new DemoCatalogBootstrap(suppliers, products).run(new DefaultApplicationArguments());
+                new DemoCatalogBootstrap(suppliers, products, movements, users, seeds, actorUsername)
+                        .run(new DefaultApplicationArguments());
             } catch (RuntimeException exception) {
                 status.setRollbackOnly();
                 throw exception;

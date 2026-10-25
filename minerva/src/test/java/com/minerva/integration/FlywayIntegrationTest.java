@@ -24,6 +24,7 @@ class FlywayIntegrationTest extends IntegrationTest {
             "customer",
             "customer_order",
             "credit_note",
+            "demo_catalog_seed",
             "exception_log",
             "inventory_movement",
             "order_detail",
@@ -104,6 +105,48 @@ class FlywayIntegrationTest extends IntegrationTest {
         assertEquals(0, jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM information_schema.columns
                 WHERE table_name = 'product_return' AND column_name = 'credit_note_id' AND is_nullable <> 'NO'
+                """, Integer.class));
+    }
+
+    @Test
+    void inventoryReportPermissionExistsAndIsGrantedOnlyToStaffRoles() {
+        List<String> permissionValues = jdbcTemplate.queryForList("""
+                SELECT enum_value.enumlabel
+                FROM pg_enum enum_value
+                JOIN pg_type enum_type ON enum_type.oid = enum_value.enumtypid
+                WHERE enum_type.typname = 'permission'
+                  AND enum_value.enumlabel = 'PRODUCT_EXPORT_INVENTORY_REPORT'
+                """, String.class);
+
+        Set<String> grantedRoles = Set.copyOf(jdbcTemplate.queryForList("""
+                SELECT id_role::text
+                FROM role_permission
+                WHERE id_permission = CAST('PRODUCT_EXPORT_INVENTORY_REPORT' AS permission)
+                """, String.class));
+
+        assertEquals(List.of("PRODUCT_EXPORT_INVENTORY_REPORT"), permissionValues);
+        assertEquals(Set.of("ADMIN", "VENDEDOR", "ALMACENISTA"), grantedRoles);
+    }
+
+    @Test
+    void inventoryMovementCorrelationSchemaIsPresent() {
+        assertEquals(1, jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM pg_index index_metadata
+                JOIN pg_class index_relation ON index_relation.oid = index_metadata.indexrelid
+                JOIN pg_class table_relation ON table_relation.oid = index_metadata.indrelid
+                WHERE table_relation.relname = 'inventory_movement'
+                  AND index_relation.relname = 'uk_inventory_movement_stock_entry_source'
+                  AND index_metadata.indisunique
+                  AND pg_get_expr(index_metadata.indpred, index_metadata.indrelid) LIKE '%STOCK_ENTRY%'
+                """, Integer.class));
+
+        assertEquals(5, jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE table_schema = 'public'
+                  AND table_name = 'demo_catalog_seed'
+                  AND constraint_type IN ('PRIMARY KEY', 'UNIQUE', 'FOREIGN KEY')
                 """, Integer.class));
     }
 }

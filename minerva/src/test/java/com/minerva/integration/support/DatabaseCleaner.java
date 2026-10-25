@@ -17,6 +17,7 @@ public final class DatabaseCleaner {
             "customer",
             "customer_order",
             "credit_note",
+            "demo_catalog_seed",
             "exception_log",
             "flyway_schema_history",
             "inventory_movement",

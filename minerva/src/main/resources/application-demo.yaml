@@ -2,3 +2,4 @@ minerva:
   demo:
     catalog:
       enabled: ${MINERVA_DEMO_CATALOG_ENABLED:false}
+      actor-username: ${MINERVA_DEMO_CATALOG_ACTOR_USERNAME:admin}
