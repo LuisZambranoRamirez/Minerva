@@ -34,6 +34,7 @@ public enum Permission {
     PRODUCT_FIND_INVENTORY_LOSSES,
     PRODUCT_FIND_LOW_STOCK,
     PRODUCT_FIND_INVENTORY_MOVEMENTS,
+    PRODUCT_EXPORT_INVENTORY_REPORT,
 
 //---------------------------------------------------------
 

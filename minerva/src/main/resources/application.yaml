@@ -43,9 +43,12 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:86000000}
 
 minerva:
+  report:
+    zone: ${MINERVA_REPORT_ZONE:America/Lima}
   demo:
     catalog:
       enabled: false
+      actor-username: ${MINERVA_DEMO_CATALOG_ACTOR_USERNAME:admin}
   bootstrap:
     enabled: ${MINERVA_BOOTSTRAP_ENABLED:false}
     admin:

@@ -29,6 +29,9 @@ class DatabaseIsolationIntegrationTest extends IntegrationTest {
             "CUSTOMER_ORDER_FIND_TRANSITIONS",
             "CUSTOMER_ORDER_CANCEL"
     );
+    private static final Set<String> EXPECTED_INVENTORY_REPORT_ROLES = Set.of(
+            "ADMIN", "VENDEDOR", "ALMACENISTA"
+    );
 
     private ScenarioObservation cleanStateObservation;
 
@@ -100,7 +103,8 @@ class DatabaseIsolationIntegrationTest extends IntegrationTest {
 
     private void assertPreservedStateIsAvailable() {
         assertEquals(
-                new PreservedState(EXPECTED_VERSIONS, EXPECTED_CUSTOMER_PERMISSIONS, 1, 1),
+                new PreservedState(EXPECTED_VERSIONS, EXPECTED_CUSTOMER_PERMISSIONS,
+                        EXPECTED_INVENTORY_REPORT_ROLES, 1, 1),
                 preservedState()
         );
     }
@@ -119,9 +123,16 @@ class DatabaseIsolationIntegrationTest extends IntegrationTest {
                 WHERE id_role = CAST('CLIENTE' AS role)
                 """, String.class));
 
+        Set<String> inventoryReportRoles = Set.copyOf(jdbcTemplate.queryForList("""
+                SELECT id_role::text
+                FROM role_permission
+                WHERE id_permission = CAST('PRODUCT_EXPORT_INVENTORY_REPORT' AS permission)
+                """, String.class));
+
         return new PreservedState(
                 flywayVersions,
                 customerPermissions,
+                inventoryReportRoles,
                 countRowsWhere("customer", "full_name", "anonimo"),
                 countRowsWhere("supplier", "supplier_name", "anonimo")
         );
@@ -153,6 +164,7 @@ class DatabaseIsolationIntegrationTest extends IntegrationTest {
     private record PreservedState(
             List<String> flywayVersions,
             Set<String> customerPermissions,
+            Set<String> inventoryReportRoles,
             long anonymousCustomers,
             long anonymousSuppliers
     ) {}

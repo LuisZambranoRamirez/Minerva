@@ -3,6 +3,8 @@ package com.minerva.domain.entities.auditEvent;
 import com.minerva.domain.valueObject.id.Id;
 
 import java.util.Set;
+import java.util.LinkedHashSet;
+import java.util.Map;
 
 /**
  * Representa una colección completa como objetivo de auditoría.
@@ -24,17 +26,27 @@ public final class CollectionAuditTarget implements Id<String> {
         ORDERS,
         ORDER_TRANSITIONS,
         INVENTORY_MOVEMENTS,
+        INVENTORY_REPORTS,
         LOW_STOCK_PRODUCTS
     }
 
     private final Resource resource;
+    private final Map<String, String> metadata;
 
     public CollectionAuditTarget(Resource resource) {
+        this(resource, Map.of());
+    }
+
+    public CollectionAuditTarget(Resource resource, Map<String, String> metadata) {
         if (resource == null) {
             throw new IllegalArgumentException("El recurso de auditoría no puede ser nulo.");
         }
+        if (metadata == null) {
+            throw new IllegalArgumentException("Los metadatos de auditoría no pueden ser nulos.");
+        }
 
         this.resource = resource;
+        this.metadata = Map.copyOf(metadata);
     }
 
     @Override
@@ -64,9 +76,10 @@ public final class CollectionAuditTarget implements Id<String> {
 
     @Override
     public Set<Attribute<?>> getAuditData() {
-        return Set.of(
-                new StringAttribute("resource", resource.name()),
-                new StringAttribute("scope", ALL)
-        );
+        Set<Attribute<?>> attributes = new LinkedHashSet<>();
+        attributes.add(new StringAttribute("resource", resource.name()));
+        attributes.add(new StringAttribute("scope", ALL));
+        metadata.forEach((name, value) -> attributes.add(new StringAttribute(name, value)));
+        return Set.copyOf(attributes);
     }
 }

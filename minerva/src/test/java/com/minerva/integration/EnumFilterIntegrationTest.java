@@ -80,18 +80,18 @@ class EnumFilterIntegrationTest extends IntegrationTest {
                     .andExpect(jsonPath("$[0].sourceId").value(sourceId.toString()));
         }
 
-        api.get("/api/v1/products/inventory-movements?type=entrada", jwt)
+        api.get("/api/v1/products/inventory-movements?type=entrada&productId=" + product.id(), jwt)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].source").value("PRODUCT_RETURN"))
+                .andExpect(jsonPath("$[0].source").value("STOCK_ENTRY"))
                 .andExpect(jsonPath("$[1].source").value("ORDER_CANCELLATION"))
-                .andExpect(jsonPath("$[2].source").value("STOCK_ENTRY"));
-        api.get("/api/v1/products/inventory-movements?type=SALIDA", jwt)
+                .andExpect(jsonPath("$[2].source").value("PRODUCT_RETURN"));
+        api.get("/api/v1/products/inventory-movements?type=SALIDA&productId=" + product.id(), jwt)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].source").value("DIRECT_SALE"))
+                .andExpect(jsonPath("$[0].source").value("ORDER_CONFIRMATION"))
                 .andExpect(jsonPath("$[1].source").value("INVENTORY_LOSS"))
-                .andExpect(jsonPath("$[2].source").value("ORDER_CONFIRMATION"));
+                .andExpect(jsonPath("$[2].source").value("DIRECT_SALE"));
 
         assertEquals(statuses, enumLabels("order_status"));
         assertEquals(List.of("ENTRADA", "SALIDA"), enumLabels("inventory_movement_type"));

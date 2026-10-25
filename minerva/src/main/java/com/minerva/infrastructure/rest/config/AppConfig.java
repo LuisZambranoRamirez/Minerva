@@ -3,6 +3,8 @@ package com.minerva.infrastructure.rest.config;
 import com.minerva.application.port.driven.AbuseAttemptRepository;
 import com.minerva.application.port.driven.AuditService;
 import com.minerva.application.port.driven.CurrentUserProvider;
+import com.minerva.application.port.driven.InventoryReportRepository;
+import com.minerva.application.port.driven.InventoryReportWriter;
 import com.minerva.application.port.drivers.CustomerAccountAdminUseCase;
 import com.minerva.application.port.drivers.CustomerRegistrationUseCase;
 import com.minerva.application.port.drivers.CustomerSelfServiceUseCase;
@@ -12,12 +14,18 @@ import com.minerva.application.port.drivers.OrderUseCase;
 import com.minerva.application.port.drivers.SaleUseCase;
 import com.minerva.application.port.drivers.SupplierUseCase;
 import com.minerva.application.port.drivers.UserUseCase;
+import com.minerva.application.port.drivers.InventoryReportUseCase;
 import com.minerva.application.service.*;
 import com.minerva.domain.services.PasswordHasher;
 import com.minerva.domain.repositories.*;
 import com.minerva.infrastructure.adapter.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.time.Clock;
+import java.time.ZoneId;
+import java.util.List;
 
 @Configuration
 public class AppConfig {
@@ -99,6 +107,22 @@ public class AppConfig {
             CustomerRepository customerRepository,
             AuditService auditService) {
         return new CustomerAccountAdminService(userRepository, currentUserProvider, customerRepository, auditService);
+    }
+
+    @Bean
+    public Clock applicationClock(@Value("${minerva.report.zone:America/Lima}") String reportZone) {
+        return Clock.system(ZoneId.of(reportZone));
+    }
+
+    @Bean
+    public InventoryReportUseCase inventoryReportService(
+            CurrentUserProvider currentUserProvider,
+            InventoryReportRepository inventoryReportRepository,
+            List<InventoryReportWriter> inventoryReportWriters,
+            AuditService auditService,
+            Clock applicationClock) {
+        return new InventoryReportService(currentUserProvider, inventoryReportRepository, inventoryReportWriters,
+                auditService, applicationClock);
     }
 
     @Bean

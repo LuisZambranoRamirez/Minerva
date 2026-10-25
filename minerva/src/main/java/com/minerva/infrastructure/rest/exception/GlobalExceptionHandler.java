@@ -3,6 +3,7 @@ package com.minerva.infrastructure.rest.exception;
 import com.minerva.application.exceptions.UnauthorizedActionException;
 import com.minerva.application.exceptions.ConflictException;
 import com.minerva.application.exceptions.ResourceNotFoundException;
+import com.minerva.application.exceptions.ReportRowLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +97,13 @@ public class GlobalExceptionHandler {
             ConflictException ex, HttpServletRequest request) {
         return response(HttpStatus.CONFLICT,
                 safeMessage(ex, "La operación entra en conflicto con el estado actual."), request);
+    }
+
+    @ExceptionHandler(ReportRowLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleReportRowLimitExceeded(
+            ReportRowLimitExceededException ex, HttpServletRequest request) {
+        return response(HttpStatus.UNPROCESSABLE_CONTENT,
+                safeMessage(ex, "El reporte solicitado contiene demasiados registros."), request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)

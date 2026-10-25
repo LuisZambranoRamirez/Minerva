@@ -4,7 +4,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
+
+import com.minerva.application.model.report.GeneratedReport;
+import com.minerva.application.model.report.InventoryReportQuery;
+import com.minerva.application.model.report.InventoryMovementFilter;
+import com.minerva.application.model.report.ReportFormat;
+import com.minerva.application.port.drivers.InventoryReportUseCase;
 
 import com.minerva.domain.constants.ProductCategory;
 import com.minerva.domain.constants.InventoryLossReason;
@@ -16,6 +23,10 @@ import com.minerva.domain.entities.inventory.InventoryMovementType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,9 +51,11 @@ import jakarta.validation.constraints.NotBlank;
 @RequestMapping("/api/v1/products")
 public class ProductController {
     private final ProductUseCase productService;
+    private final InventoryReportUseCase inventoryReportService;
 
-    public ProductController(ProductUseCase productService) {
+    public ProductController(ProductUseCase productService, InventoryReportUseCase inventoryReportService) {
         this.productService = productService;
+        this.inventoryReportService = inventoryReportService;
     }
 
     // --------------------- WRITE ---------------------
@@ -164,9 +177,10 @@ public class ProductController {
             @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
+        InventoryMovementFilter filter = parseInventoryFilter(productId, type, source, from, to);
         return ResponseEntity.ok(productService.findInventoryMovements(
-                        productId, parseMovementType(type), parseMovementSource(source),
-                        parseDateTime("from", from), parseDateTime("to", to), page, size)
+                        filter.productId().toString(), filter.type(), filter.source(),
+                        filter.from(), filter.to(), page, size)
                 .stream().map(this::mapToResponse).toList());
     }
 
@@ -179,10 +193,32 @@ public class ProductController {
             @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
+        InventoryMovementFilter filter = parseInventoryFilter(productId, type, source, from, to);
         return ResponseEntity.ok(productService.findInventoryMovements(
-                        productId, parseMovementType(type), parseMovementSource(source),
-                        parseDateTime("from", from), parseDateTime("to", to), page, size)
+                        filter.productId() == null ? null : filter.productId().toString(),
+                        filter.type(), filter.source(), filter.from(), filter.to(), page, size)
                 .stream().map(this::mapToResponse).toList());
+    }
+
+    @GetMapping("/inventory-movements/export")
+    public ResponseEntity<byte[]> exportInventoryMovements(
+            @RequestParam String format,
+            @RequestParam(required = false) String productId,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        InventoryMovementFilter filter = parseInventoryFilter(productId, type, source, from, to);
+        InventoryReportQuery query = new InventoryReportQuery(ReportFormat.from(format),
+                filter.productId(), filter.type(), filter.source(), filter.from(), filter.to());
+        GeneratedReport report = inventoryReportService.generate(query);
+        validateReportFilename(report.filename(), query.format());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(report.mediaType()));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(report.filename()).build());
+        headers.setCacheControl(CacheControl.noStore());
+        return new ResponseEntity<>(report.content(), headers, HttpStatus.OK);
     }
 
     @GetMapping("/{productId}/inventory-losses")
@@ -276,6 +312,32 @@ public class ProductController {
             return LocalDateTime.parse(value.trim());
         } catch (DateTimeParseException exception) {
             throw new BadRequestException("El parámetro '" + parameterName + "' debe tener formato ISO-8601, por ejemplo 2026-09-23T10:30:00.");
+        }
+    }
+
+    private UUID parseProductId(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return UUID.fromString(value.trim());
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException("El parámetro 'productId' debe ser un UUID válido.");
+        }
+    }
+
+    private InventoryMovementFilter parseInventoryFilter(
+            String productId, String type, String source, String from, String to) {
+        return new InventoryMovementFilter(
+                parseProductId(productId),
+                parseMovementType(type),
+                parseMovementSource(source),
+                parseDateTime("from", from),
+                parseDateTime("to", to));
+    }
+
+    private void validateReportFilename(String filename, ReportFormat format) {
+        String pattern = "movimientos-inventario-\\d{8}-\\d{6}\\." + format.extension();
+        if (!filename.matches(pattern)) {
+            throw new IllegalStateException("El generador devolvió un nombre de archivo inseguro.");
         }
     }
 

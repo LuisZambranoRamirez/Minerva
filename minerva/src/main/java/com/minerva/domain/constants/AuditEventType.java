@@ -10,7 +10,7 @@ public enum AuditEventType {
         String name = permission.name();
 
         if (name.contains("_UPDATE_")) return UPDATE;
-        if (name.contains("_FIND_") || name.endsWith("_FIND_ALL")
+        if (name.contains("_FIND_") || name.contains("_EXPORT_") || name.endsWith("_FIND_ALL")
                 || name.endsWith("_GET_ALL") || name.endsWith("_AUTHENTICATE")) {
             return READ;
         }

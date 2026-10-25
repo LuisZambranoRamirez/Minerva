@@ -61,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -271,6 +272,14 @@ class OrderServiceTest {
         final List<InventoryMovement> appended = new ArrayList<>();
         @Override public void append(InventoryMovement movement) { appended.add(movement); }
         @Override public void appendAll(List<InventoryMovement> movements) { appended.addAll(movements); }
+        @Override public boolean appendIfAbsent(InventoryMovement movement) {
+            if (movement.getSourceId() != null && existsBySourceAndSourceId(movement.getSource(), movement.getSourceId())) return false;
+            appended.add(movement);
+            return true;
+        }
+        @Override public boolean existsBySourceAndSourceId(InventoryMovementSource source, UUID sourceId) {
+            return appended.stream().anyMatch(value -> value.getSource() == source && sourceId.equals(value.getSourceId()));
+        }
         @Override public List<InventoryMovement> findAll(ProductId productId, InventoryMovementType type, InventoryMovementSource source, LocalDateTime from, LocalDateTime to, int page, int size) { return List.copyOf(appended); }
     }
 
